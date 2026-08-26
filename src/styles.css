@@ -167,7 +167,8 @@
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--color-zinc-100, #f4f4f5);
+    color: var(--color-zinc-900, #18181b);
+    font-family: var(--font-sans);
   }
 }
