@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
+import { RatingForm } from "@/components/RatingForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_authed/trips")({
 
 const myRequestsQueryKey = ["my-trip-requests"];
 const myMatchesQueryKey = ["my-matches"];
+const myRatingActivityQueryKey = ["my-rating-activity"];
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -36,6 +38,10 @@ function formatTime(iso: string) {
 function StatusScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Trips where the rating prompt was skipped this session — skipping
+  // creates no row, so nothing in the DB distinguishes "skipped" from
+  // "never seen"; this just keeps it from popping back up immediately.
+  const [dismissedRatingPrompts, setDismissedRatingPrompts] = useState<Set<string>>(new Set());
 
   const myRequests = useQuery({
     queryKey: myRequestsQueryKey,
@@ -61,6 +67,26 @@ function StatusScreen() {
     },
   });
 
+  const myRatingActivity = useQuery({
+    queryKey: myRatingActivityQueryKey,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("my_rating_activity");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const ratedTripIds = new Set(
+    (myRatingActivity.data ?? []).filter((r) => r.direction === "given").map((r) => r.trip_id),
+  );
+
+  const markCompleted = async (tripId: string) => {
+    const { error } = await supabase.rpc("mark_trip_completed", { p_trip_id: tripId });
+    if (!error) {
+      queryClient.invalidateQueries({ queryKey: myMatchesQueryKey });
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -75,6 +101,9 @@ function StatusScreen() {
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
         queryClient.invalidateQueries({ queryKey: myMatchesQueryKey });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "ratings" }, () => {
+        queryClient.invalidateQueries({ queryKey: myRatingActivityQueryKey });
       })
       .subscribe();
 
@@ -98,9 +127,7 @@ function StatusScreen() {
   return (
     <PhoneShell active="status">
       <header className="p-6 pb-2">
-        <h1 className="font-serif text-2xl font-medium leading-tight text-forest">
-          Your Journey
-        </h1>
+        <h1 className="font-serif text-2xl font-medium leading-tight text-forest">Your Journey</h1>
       </header>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-6">
@@ -124,15 +151,25 @@ function StatusScreen() {
                 className="space-y-4 rounded-[20px] bg-zinc-50 p-5 ring-1 ring-zinc-950/5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-900">
-                    Matched
+                  <span
+                    className={
+                      match.match_status === "completed"
+                        ? "rounded-full bg-zinc-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-700"
+                        : "rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-900"
+                    }
+                  >
+                    {match.match_status === "completed" ? "Completed" : "Matched"}
                   </span>
                   <span className="text-xs text-zinc-400">
                     Ref #{match.match_id.slice(0, 8).toUpperCase()}
                   </span>
                 </div>
 
-                <div className="flex items-start gap-4">
+                <Link
+                  to="/profile/$userId"
+                  params={{ userId: match.counterpart_id }}
+                  className="flex items-start gap-4"
+                >
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-[16px] bg-forest/10 text-base font-semibold text-forest outline-1 -outline-offset-1 outline-black/5">
                     {match.counterpart_display_name.charAt(0) || "?"}
                   </div>
@@ -145,7 +182,7 @@ function StatusScreen() {
                       {match.counterpart_destination}
                     </div>
                   </div>
-                </div>
+                </Link>
 
                 <div className="pt-2">
                   <div className="flex gap-4">
@@ -174,6 +211,35 @@ function StatusScreen() {
                     </div>
                   </div>
                 </div>
+
+                {match.match_status !== "completed" ? (
+                  Date.now() >=
+                  Math.max(
+                    new Date(match.my_requested_time).getTime(),
+                    new Date(match.counterpart_requested_time).getTime(),
+                  ) ? (
+                    <button
+                      type="button"
+                      onClick={() => markCompleted(match.match_id)}
+                      className="w-full rounded-[12px] bg-forest py-2 text-xs font-medium text-sand"
+                    >
+                      Mark trip as completed
+                    </button>
+                  ) : (
+                    <p className="text-center text-[11px] text-zinc-400">
+                      You can mark this trip complete once it's happened.
+                    </p>
+                  )
+                ) : ratedTripIds.has(match.match_id) ||
+                  dismissedRatingPrompts.has(match.match_id) ? null : (
+                  <RatingForm
+                    tripId={match.match_id}
+                    onDone={() => {
+                      setDismissedRatingPrompts((prev) => new Set(prev).add(match.match_id));
+                      queryClient.invalidateQueries({ queryKey: myRatingActivityQueryKey });
+                    }}
+                  />
+                )}
               </div>
             ))}
 

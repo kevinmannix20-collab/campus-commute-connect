@@ -79,18 +79,27 @@ export type Database = {
           id: string;
           trip_request_id_a: string;
           trip_request_id_b: string;
+          status: string;
+          completed_at: string | null;
+          completed_by: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           trip_request_id_a: string;
           trip_request_id_b: string;
+          status?: string;
+          completed_at?: string | null;
+          completed_by?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           trip_request_id_a?: string;
           trip_request_id_b?: string;
+          status?: string;
+          completed_at?: string | null;
+          completed_by?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -106,6 +115,44 @@ export type Database = {
             columns: ["trip_request_id_b"];
             isOneToOne: false;
             referencedRelation: "trip_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ratings: {
+        Row: {
+          id: string;
+          trip_id: string;
+          rater_id: string;
+          ratee_id: string;
+          stars: number | null;
+          comment: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          rater_id: string;
+          ratee_id: string;
+          stars?: number | null;
+          comment?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          trip_id?: string;
+          rater_id?: string;
+          ratee_id?: string;
+          stars?: number | null;
+          comment?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ratings_trip_id_fkey";
+            columns: ["trip_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
             referencedColumns: ["id"];
           },
         ];
@@ -128,26 +175,98 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: {
           id: string;
+          requester_id: string;
           starting_point: string;
           destination: string;
           requested_time: string;
           mode: string;
           created_at: string;
           requester_display_name: string;
+          requester_average_stars: number | null;
+          requester_completed_trip_count: number;
         }[];
       };
       my_matches: {
         Args: Record<PropertyKey, never>;
         Returns: {
           match_id: string;
+          match_status: string;
           match_created_at: string;
+          completed_at: string | null;
           my_trip_request_id: string;
+          my_requested_time: string;
           counterpart_trip_request_id: string;
+          counterpart_id: string;
           counterpart_display_name: string;
           counterpart_starting_point: string;
           counterpart_destination: string;
           counterpart_requested_time: string;
           counterpart_mode: string;
+        }[];
+      };
+      mark_trip_completed: {
+        Args: { p_trip_id: string };
+        Returns: {
+          id: string;
+          trip_request_id_a: string;
+          trip_request_id_b: string;
+          status: string;
+          completed_at: string | null;
+          completed_by: string | null;
+          created_at: string;
+        };
+      };
+      submit_rating: {
+        Args: { p_trip_id: string; p_stars: number | null; p_comment: string | null };
+        Returns: {
+          id: string;
+          trip_id: string;
+          rater_id: string;
+          ratee_id: string;
+          stars: number | null;
+          comment: string | null;
+          created_at: string;
+        };
+      };
+      profile_stats: {
+        Args: { p_user_id: string };
+        Returns: {
+          full_name: string;
+          average_stars: number | null;
+          completed_trip_count: number;
+        }[];
+      };
+      profile_reviews: {
+        Args: { p_user_id: string };
+        Returns: {
+          rater_name: string;
+          stars: number | null;
+          comment: string | null;
+          created_at: string;
+        }[];
+      };
+      my_trip_history: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          trip_id: string;
+          completed_at: string | null;
+          counterpart_id: string;
+          counterpart_name: string;
+          my_destination: string;
+          counterpart_destination: string;
+          requested_time: string;
+        }[];
+      };
+      my_rating_activity: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          trip_id: string;
+          direction: string;
+          counterpart_id: string;
+          counterpart_name: string;
+          stars: number | null;
+          comment: string | null;
+          created_at: string;
         }[];
       };
     };

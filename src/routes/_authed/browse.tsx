@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
+import { StarDisplay } from "@/components/StarRating";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
@@ -80,6 +81,16 @@ function BrowseScreen() {
     };
   }, [queryClient]);
 
+  // Higher-rated requesters first; unrated ("New driver") ones sink to the
+  // bottom rather than looking penalized with a visible "0 stars". Stable
+  // sort preserves the RPC's created_at-desc order within each group.
+  const sortedRequests = [...(openRequests.data ?? [])].sort((a, b) => {
+    if (a.requester_average_stars === null && b.requester_average_stars === null) return 0;
+    if (a.requester_average_stars === null) return 1;
+    if (b.requester_average_stars === null) return -1;
+    return b.requester_average_stars - a.requester_average_stars;
+  });
+
   const matchWith = async (theirRequestId: string) => {
     if (!myOpenRequest.data) return;
     const { error } = await supabase.rpc("create_match", {
@@ -111,19 +122,30 @@ function BrowseScreen() {
           <p className="p-4 text-center text-xs text-zinc-400">Loading open commutes…</p>
         ) : openRequests.isError ? (
           <p className="p-4 text-center text-xs text-red-600">Couldn&apos;t load requests.</p>
-        ) : openRequests.data && openRequests.data.length > 0 ? (
-          openRequests.data.map((request) => (
+        ) : sortedRequests.length > 0 ? (
+          sortedRequests.map((request) => (
             <div
               key={request.id}
               className="space-y-3 rounded-[20px] bg-zinc-50 p-4 ring-1 ring-zinc-950/5"
             >
               <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
+                <Link
+                  to="/profile/$userId"
+                  params={{ userId: request.requester_id }}
+                  className="flex items-center gap-2"
+                >
                   <div className="flex size-8 items-center justify-center rounded-[10px] bg-forest/10 text-xs font-semibold text-forest outline-1 -outline-offset-1 outline-black/5">
                     {request.requester_display_name.charAt(0) || "?"}
                   </div>
-                  <span className="text-sm font-semibold">{request.requester_display_name}</span>
-                </div>
+                  <span className="flex flex-col">
+                    <span className="text-sm font-semibold">{request.requester_display_name}</span>
+                    <StarDisplay
+                      average={request.requester_average_stars}
+                      emptyLabel="New driver"
+                      className="text-[10px] text-zinc-500"
+                    />
+                  </span>
+                </Link>
                 <span
                   className={
                     request.mode === "bus"

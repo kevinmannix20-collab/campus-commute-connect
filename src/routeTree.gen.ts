@@ -16,6 +16,7 @@ import { Route as AuthedBrowseRouteImport } from './routes/_authed/browse'
 import { Route as AuthedTripsRouteImport } from './routes/_authed/trips'
 import { Route as GuestLoginRouteImport } from './routes/_guest/login'
 import { Route as GuestSignupRouteImport } from './routes/_guest/signup'
+import { Route as AuthedProfileUserIdRouteImport } from './routes/_authed/profile.$userId'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -50,6 +51,11 @@ const GuestSignupRoute = GuestSignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => GuestRoute,
 } as any)
+const AuthedProfileUserIdRoute = AuthedProfileUserIdRouteImport.update({
+  id: '/profile/$userId',
+  path: '/profile/$userId',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/trips': typeof AuthedTripsRoute
   '/login': typeof GuestLoginRoute
   '/signup': typeof GuestSignupRoute
+  '/profile/$userId': typeof AuthedProfileUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthedIndexRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByTo {
   '/trips': typeof AuthedTripsRoute
   '/login': typeof GuestLoginRoute
   '/signup': typeof GuestSignupRoute
+  '/profile/$userId': typeof AuthedProfileUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -74,12 +82,14 @@ export interface FileRoutesById {
   '/_guest/login': typeof GuestLoginRoute
   '/_guest/signup': typeof GuestSignupRoute
   '/_authed/': typeof AuthedIndexRoute
+  '/_authed/profile/$userId': typeof AuthedProfileUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/browse' | '/trips' | '/login' | '/signup'
+  fullPaths:
+    '/' | '/browse' | '/trips' | '/login' | '/signup' | '/profile/$userId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/browse' | '/trips' | '/login' | '/signup'
+  to: '/' | '/browse' | '/trips' | '/login' | '/signup' | '/profile/$userId'
   id:
     | '__root__'
     | '/_authed'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/_guest/login'
     | '/_guest/signup'
     | '/_authed/'
+    | '/_authed/profile/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -147,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuestSignupRouteImport
       parentRoute: typeof GuestRoute
     }
+    '/_authed/profile/$userId': {
+      id: '/_authed/profile/$userId'
+      path: '/profile/$userId'
+      fullPath: '/profile/$userId'
+      preLoaderRoute: typeof AuthedProfileUserIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
@@ -154,12 +172,14 @@ interface AuthedRouteChildren {
   AuthedBrowseRoute: typeof AuthedBrowseRoute
   AuthedTripsRoute: typeof AuthedTripsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedProfileUserIdRoute: typeof AuthedProfileUserIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedBrowseRoute: AuthedBrowseRoute,
   AuthedTripsRoute: AuthedTripsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedProfileUserIdRoute: AuthedProfileUserIdRoute,
 }
 
 const AuthedRouteWithChildren =

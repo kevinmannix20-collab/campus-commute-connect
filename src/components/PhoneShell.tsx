@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Home, Navigation, Search, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -6,10 +7,12 @@ import { supabase } from "@/integrations/supabase/client";
 function NavItem({
   to,
   label,
+  icon: Icon,
   active,
 }: {
   to: string;
   label: string;
+  icon: LucideIcon;
   active?: boolean;
 }) {
   return (
@@ -18,12 +21,10 @@ function NavItem({
       className={
         active
           ? "flex flex-col items-center gap-1 text-forest"
-          : "flex flex-col items-center gap-1 opacity-40"
+          : "flex flex-col items-center gap-1 text-zinc-400"
       }
     >
-      <div
-        className={active ? "size-5 rounded-md bg-forest" : "size-5 rounded-md bg-zinc-900"}
-      />
+      <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
       <span className={active ? "text-[9px] font-semibold" : "text-[9px] font-medium"}>
         {label}
       </span>
@@ -53,7 +54,7 @@ export function PhoneShell({
   active,
 }: {
   children: ReactNode;
-  active: "home" | "browse" | "status";
+  active?: "home" | "browse" | "status";
 }) {
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-100 p-4 font-sans text-zinc-900 selection:bg-forest/10 md:p-8">
@@ -61,9 +62,9 @@ export function PhoneShell({
         <SignOutButton />
         <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
         <nav className="flex items-center justify-around border-t border-zinc-950/5 bg-sand p-4">
-          <NavItem to="/" label="Home" active={active === "home"} />
-          <NavItem to="/browse" label="Browse" active={active === "browse"} />
-          <NavItem to="/trips" label="Status" active={active === "status"} />
+          <NavItem to="/" label="Home" icon={Home} active={active === "home"} />
+          <NavItem to="/browse" label="Browse" icon={Search} active={active === "browse"} />
+          <NavItem to="/trips" label="Status" icon={Navigation} active={active === "status"} />
         </nav>
       </section>
     </div>
