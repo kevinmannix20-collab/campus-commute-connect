@@ -161,6 +161,26 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* Google Places Autocomplete dropdown — matches Commute Mate's rounded,
+   sans-serif look instead of the browser-default styling Google ships. */
+.pac-container {
+  font-family: var(--font-sans);
+  border-radius: 12px;
+  margin-top: 4px;
+  border: 1px solid oklch(0.929 0.013 255.508);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
+}
+
+.pac-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pac-item-query {
+  font-size: 13px;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

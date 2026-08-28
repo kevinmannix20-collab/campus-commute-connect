@@ -3,9 +3,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import campusMap from "@/assets/campus-map.jpg";
+import { CommuteMap } from "@/components/CommuteMap";
 import { PhoneShell } from "@/components/PhoneShell";
+import { PlaceAutocompleteInput, type ResolvedPlace } from "@/components/PlaceAutocompleteInput";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useGoogleMapsLoaded } from "@/lib/use-google-maps";
 import { nextOccurrenceOf } from "@/lib/trip-time";
 
 export const Route = createFileRoute("/_authed/")({
@@ -28,23 +31,40 @@ export const Route = createFileRoute("/_authed/")({
   component: RequestScreen,
 });
 
-const STARTING_POINT = "Main Campus Library";
+const DEFAULT_STARTING_POINT = "Main Campus Library";
+
+type LocationField = { address: string; lat: number | null; lng: number | null };
 
 function RequestScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [destination, setDestination] = useState("");
+  const mapsLoaded = useGoogleMapsLoaded();
+  const [pickup, setPickup] = useState<LocationField>({
+    address: DEFAULT_STARTING_POINT,
+    lat: null,
+    lng: null,
+  });
+  const [destination, setDestination] = useState<LocationField>({
+    address: "",
+    lat: null,
+    lng: null,
+  });
   const [time, setTime] = useState("22:45");
   const [mode, setMode] = useState<"bus" | "car">("bus");
   const [formError, setFormError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
 
   const submitRequest = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
       const { error } = await supabase.from("trip_requests").insert({
         user_id: user.id,
-        starting_point: STARTING_POINT,
-        destination,
+        starting_point: pickup.address,
+        starting_point_lat: pickup.lat,
+        starting_point_lng: pickup.lng,
+        destination: destination.address,
+        destination_lat: destination.lat,
+        destination_lng: destination.lng,
         requested_time: nextOccurrenceOf(time).toISOString(),
         mode,
       });
@@ -60,12 +80,59 @@ function RequestScreen() {
 
   const handleSubmit = () => {
     setFormError(null);
-    if (!destination.trim()) {
+    if (!destination.address.trim()) {
       setFormError("Enter a destination first");
       return;
     }
     submitRequest.mutate();
   };
+
+  const handlePlaceSelected =
+    (setter: (field: LocationField) => void) => (place: ResolvedPlace) => {
+      setter(place);
+    };
+
+  const handleUseCurrentLocation = () => {
+    setFormError(null);
+    if (!("geolocation" in navigator)) {
+      setFormError(
+        "Your browser doesn't support location access — please enter your address manually.",
+      );
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+          setLocating(false);
+          const address =
+            status === "OK" && results?.[0]
+              ? results[0].formatted_address
+              : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          setPickup({ address, lat: latitude, lng: longitude });
+        });
+      },
+      (error) => {
+        setLocating(false);
+        setFormError(
+          error.code === error.PERMISSION_DENIED
+            ? "Location access denied — please enter your address manually."
+            : "Couldn't determine your location — please enter your address manually.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  };
+
+  const pickupCoords =
+    pickup.lat !== null && pickup.lng !== null ? { lat: pickup.lat, lng: pickup.lng } : null;
+  const destinationCoords =
+    destination.lat !== null && destination.lng !== null
+      ? { lat: destination.lat, lng: destination.lng }
+      : null;
 
   return (
     <PhoneShell active="home">
@@ -78,12 +145,34 @@ function RequestScreen() {
       <div className="flex-1 space-y-6 overflow-y-auto px-6">
         <div className="space-y-4">
           <div>
-            <label className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              Starting Point
-            </label>
+            <div className="mb-1 ml-1 flex items-center justify-between">
+              <label
+                htmlFor="starting-point"
+                className="block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+              >
+                Starting Point
+              </label>
+              {mapsLoaded ? (
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  disabled={locating}
+                  className="text-[10px] font-medium text-forest underline underline-offset-2 disabled:opacity-50"
+                >
+                  {locating ? "Locating…" : "Use current location"}
+                </button>
+              ) : null}
+            </div>
             <div className="flex w-full items-center gap-3 rounded-[12px] bg-zinc-50 px-4 py-3 ring-1 ring-zinc-200">
               <div className="size-2 rounded-full bg-forest" />
-              <span className="text-sm text-zinc-900">{STARTING_POINT}</span>
+              <PlaceAutocompleteInput
+                id="starting-point"
+                value={pickup.address}
+                onTextChange={(text) => setPickup({ address: text, lat: null, lng: null })}
+                onPlaceSelected={handlePlaceSelected(setPickup)}
+                placeholder="Enter starting point..."
+                className="w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
+              />
             </div>
           </div>
 
@@ -96,10 +185,11 @@ function RequestScreen() {
             </label>
             <div className="flex w-full items-center gap-3 rounded-[12px] bg-zinc-50 px-4 py-3 ring-1 ring-zinc-200">
               <div className="size-2 rounded-full border border-forest" />
-              <input
+              <PlaceAutocompleteInput
                 id="destination"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                value={destination.address}
+                onTextChange={(text) => setDestination({ address: text, lat: null, lng: null })}
+                onPlaceSelected={handlePlaceSelected(setDestination)}
                 placeholder="Enter destination..."
                 className="w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
               />
@@ -154,19 +244,23 @@ function RequestScreen() {
           </div>
         </div>
 
-        <div className="relative h-48 overflow-hidden rounded-[12px] bg-zinc-100 ring-1 ring-black/5">
-          <img
-            src={campusMap}
-            alt="Campus map at night with a highlighted route"
-            width={800}
-            height={512}
-            className="size-full object-cover opacity-40"
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="animate-searching size-12 rounded-full bg-forest/10" />
-            <div className="size-3 rounded-full bg-forest" />
+        {mapsLoaded && (pickupCoords || destinationCoords) ? (
+          <CommuteMap pickup={pickupCoords} destination={destinationCoords} />
+        ) : (
+          <div className="relative h-48 overflow-hidden rounded-[12px] bg-zinc-100 ring-1 ring-black/5">
+            <img
+              src={campusMap}
+              alt="Campus map at night with a highlighted route"
+              width={800}
+              height={512}
+              className="size-full object-cover opacity-40"
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-searching size-12 rounded-full bg-forest/10" />
+              <div className="size-3 rounded-full bg-forest" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="border-t border-zinc-950/5 bg-sand p-6">

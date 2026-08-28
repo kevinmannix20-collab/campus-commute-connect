@@ -34,7 +34,11 @@ export type Database = {
           id: string;
           user_id: string;
           starting_point: string;
+          starting_point_lat: number | null;
+          starting_point_lng: number | null;
           destination: string;
+          destination_lat: number | null;
+          destination_lng: number | null;
           requested_time: string;
           mode: string;
           status: string;
@@ -44,7 +48,11 @@ export type Database = {
           id?: string;
           user_id: string;
           starting_point: string;
+          starting_point_lat?: number | null;
+          starting_point_lng?: number | null;
           destination: string;
+          destination_lat?: number | null;
+          destination_lng?: number | null;
           requested_time: string;
           mode: string;
           status?: string;
@@ -54,7 +62,11 @@ export type Database = {
           id?: string;
           user_id?: string;
           starting_point?: string;
+          starting_point_lat?: number | null;
+          starting_point_lng?: number | null;
           destination?: string;
+          destination_lat?: number | null;
+          destination_lng?: number | null;
           requested_time?: string;
           mode?: string;
           status?: string;

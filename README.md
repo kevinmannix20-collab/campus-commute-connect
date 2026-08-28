@@ -28,3 +28,20 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Google Maps setup
+
+The request screen uses Google Maps for address autocomplete, "use my current
+location," and the pickup/destination map. This requires a Google Cloud API
+key that isn't included in the repo — without it, the app still works, but
+falls back to plain text location fields and no map.
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/), create or reuse a project.
+2. Under **APIs & Services → Library**, enable:
+   - **Maps JavaScript API**
+   - **Places API** and **Places API (New)** — the address-autocomplete widget this app uses runs on the classic Places API; enabling both avoids surprises depending on how your project's Places access is configured.
+   - **Geocoding API** — used to turn "current location" coordinates back into a readable address.
+3. Under **Credentials**, create a new API key.
+4. Restrict the key to **HTTP referrers**, and add this app's deployed domain(s) plus `localhost:8080` for local dev. This key is visible in the browser by design (client-side Maps libraries require it) — the referrer restriction is what keeps it from being usable elsewhere.
+5. Add it as `VITE_GOOGLE_MAPS_API_KEY` in a `.env.local` file at the repo root (see `.env.example`), and as an environment variable in your hosting platform for production. The `VITE_` prefix is required for Vite to expose it to browser code.
+6. Billing must be enabled on the project for these APIs to work, but Google applies a $200/month credit automatically — at this app's expected usage, cost should be $0.
