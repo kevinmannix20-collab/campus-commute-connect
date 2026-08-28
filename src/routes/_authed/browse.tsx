@@ -76,6 +76,9 @@ function BrowseScreen() {
         queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
         queryClient.invalidateQueries({ queryKey: myOpenRequestQueryKey });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "bus_group_members" }, () => {
+        queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
+      })
       .subscribe();
 
     return () => {
@@ -109,6 +112,19 @@ function BrowseScreen() {
     }
   };
 
+  // Joining a bus post doesn't pair two requests like car matching does —
+  // there's no reciprocal offer, so no need to have posted your own
+  // request first. Up to 6 people total (poster + 5 joiners); the RPC
+  // itself enforces the cap and closes the post once full.
+  const joinBusGroup = async (tripRequestId: string) => {
+    const { error } = await supabase.rpc("join_bus_group", {
+      p_trip_request_id: tripRequestId,
+    });
+    if (!error) {
+      queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
+    }
+  };
+
   return (
     <PhoneShell active="browse">
       <header className="sticky top-0 z-20 bg-sand p-6 pb-2">
@@ -116,9 +132,11 @@ function BrowseScreen() {
         <p className="mt-1 max-w-[40ch] text-pretty text-xs text-zinc-500">
           Help a classmate get home safely tonight.
         </p>
-        {!myOpenRequest.isLoading && !myOpenRequest.data && openRequests.data?.length ? (
+        {!myOpenRequest.isLoading &&
+        !myOpenRequest.data &&
+        openRequests.data?.some((r) => r.mode === "car") ? (
           <p className="mt-2 text-xs text-amber-700">
-            Post your own request from Home before you can match with someone.
+            Post your own request from Home before you can offer or accept a ride.
           </p>
         ) : null}
       </header>
@@ -181,12 +199,18 @@ function BrowseScreen() {
                   <span className="size-1.5 rounded-full bg-zinc-300" />
                   Time: {formatTime(request.requested_time)}
                 </div>
+                {request.mode === "bus" ? (
+                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                    <span className="size-1.5 rounded-full bg-zinc-300" />
+                    {request.bus_member_count ?? 1}/6 joined
+                  </div>
+                ) : null}
               </div>
               {request.mode === "bus" ? (
                 <button
                   type="button"
-                  onClick={() => matchWith(request.id)}
-                  disabled={!myOpenRequest.data}
+                  onClick={() => joinBusGroup(request.id)}
+                  disabled={(request.bus_member_count ?? 1) >= 6}
                   className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-forest py-2 pl-2 pr-3 text-xs font-medium text-sand shadow-sm ring-1 ring-forest disabled:opacity-40"
                 >
                   <svg

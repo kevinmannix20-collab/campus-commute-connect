@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { MessageCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authed/trips")({
 const myRequestsQueryKey = ["my-trip-requests"];
 const myMatchesQueryKey = ["my-matches"];
 const myRatingActivityQueryKey = ["my-rating-activity"];
+const myBusGroupsQueryKey = ["my-bus-groups"];
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -76,6 +78,15 @@ function StatusScreen() {
     },
   });
 
+  const myBusGroups = useQuery({
+    queryKey: myBusGroupsQueryKey,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("my_bus_groups");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const ratedTripIds = new Set(
     (myRatingActivity.data ?? []).filter((r) => r.direction === "given").map((r) => r.trip_id),
   );
@@ -105,6 +116,9 @@ function StatusScreen() {
       .on("postgres_changes", { event: "*", schema: "public", table: "ratings" }, () => {
         queryClient.invalidateQueries({ queryKey: myRatingActivityQueryKey });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "bus_group_members" }, () => {
+        queryClient.invalidateQueries({ queryKey: myBusGroupsQueryKey });
+      })
       .subscribe();
 
     return () => {
@@ -117,12 +131,14 @@ function StatusScreen() {
     queryClient.invalidateQueries({ queryKey: myRequestsQueryKey });
   };
 
-  const isLoading = myRequests.isLoading || myMatches.isLoading;
+  const isLoading = myRequests.isLoading || myMatches.isLoading || myBusGroups.isLoading;
   const matchedRequestIds = new Set((myMatches.data ?? []).map((m) => m.my_trip_request_id));
+  // Bus posts are shown via the bus-groups section below (host or member,
+  // open or full) instead of here, regardless of status.
   const pendingRequests = (myRequests.data ?? []).filter(
-    (r) => r.status === "open" && !matchedRequestIds.has(r.id),
+    (r) => r.status === "open" && r.mode !== "bus" && !matchedRequestIds.has(r.id),
   );
-  const hasAnyRequests = (myRequests.data?.length ?? 0) > 0;
+  const hasAnyRequests = (myRequests.data?.length ?? 0) > 0 || (myBusGroups.data?.length ?? 0) > 0;
 
   return (
     <PhoneShell active="status">
@@ -240,8 +256,63 @@ function StatusScreen() {
                     }}
                   />
                 )}
+
+                <Link
+                  to="/messages/$threadType/$threadId"
+                  params={{ threadType: "match", threadId: match.match_id }}
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5"
+                >
+                  <MessageCircle className="size-4" />
+                  Message {match.counterpart_display_name}
+                </Link>
               </div>
             ))}
+
+            {(myBusGroups.data ?? []).length > 0 ? (
+              <div>
+                <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                  Bus Groups
+                </h2>
+                <div className="space-y-3">
+                  {(myBusGroups.data ?? []).map((group) => (
+                    <div
+                      key={group.trip_request_id}
+                      className="space-y-3 rounded-[20px] bg-zinc-50 p-4 ring-1 ring-zinc-950/5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-900">
+                          {group.role === "host" ? "Your Post" : "Joined"}
+                        </span>
+                        <span className="text-xs text-zinc-400">{group.member_count}/6 riders</span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-zinc-900">
+                          To {group.destination}
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {formatTime(group.requested_time)} · {group.starting_point}
+                        </div>
+                      </div>
+                      {group.other_display_names.length > 0 ? (
+                        <p className="text-xs text-zinc-500">
+                          With: {group.other_display_names.join(", ")}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-zinc-400">No one else has joined yet.</p>
+                      )}
+                      <Link
+                        to="/messages/$threadType/$threadId"
+                        params={{ threadType: "bus", threadId: group.trip_request_id }}
+                        className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5"
+                      >
+                        <MessageCircle className="size-4" />
+                        Group chat
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {pendingRequests.length > 0 ? (
               <div>

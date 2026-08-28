@@ -160,6 +160,77 @@ export type Database = {
           },
         ];
       };
+      bus_group_members: {
+        Row: {
+          id: string;
+          trip_request_id: string;
+          user_id: string;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_request_id: string;
+          user_id: string;
+          joined_at?: string;
+        };
+        Update: {
+          id?: string;
+          trip_request_id?: string;
+          user_id?: string;
+          joined_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bus_group_members_trip_request_id_fkey";
+            columns: ["trip_request_id"];
+            isOneToOne: false;
+            referencedRelation: "trip_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      messages: {
+        Row: {
+          id: string;
+          match_id: string | null;
+          bus_trip_request_id: string | null;
+          sender_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          match_id?: string | null;
+          bus_trip_request_id?: string | null;
+          sender_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          match_id?: string | null;
+          bus_trip_request_id?: string | null;
+          sender_id?: string;
+          body?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "messages_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "messages_bus_trip_request_id_fkey";
+            columns: ["bus_trip_request_id"];
+            isOneToOne: false;
+            referencedRelation: "trip_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -192,6 +263,7 @@ export type Database = {
           requester_average_stars: number | null;
           requester_completed_trip_count: number;
           requester_rides_given: number;
+          bus_member_count: number | null;
         }[];
       };
       my_matches: {
@@ -243,6 +315,7 @@ export type Database = {
           average_stars: number | null;
           completed_trip_count: number;
           rides_given: number;
+          member_since: string;
         }[];
       };
       profile_reviews: {
@@ -276,6 +349,29 @@ export type Database = {
           stars: number | null;
           comment: string | null;
           created_at: string;
+        }[];
+      };
+      join_bus_group: {
+        Args: { p_trip_request_id: string };
+        Returns: undefined;
+      };
+      my_bus_groups: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          trip_request_id: string;
+          role: string;
+          starting_point: string;
+          destination: string;
+          requested_time: string;
+          member_count: number;
+          other_display_names: string[];
+        }[];
+      };
+      thread_participants: {
+        Args: { p_thread_type: string; p_thread_id: string };
+        Returns: {
+          user_id: string;
+          display_name: string;
         }[];
       };
     };

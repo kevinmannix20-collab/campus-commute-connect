@@ -9,7 +9,7 @@ import { PlaceAutocompleteInput, type ResolvedPlace } from "@/components/PlaceAu
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleMapsLoaded } from "@/lib/use-google-maps";
-import { nextOccurrenceOf } from "@/lib/trip-time";
+import { combineDateAndTime, todayLocalDateString } from "@/lib/trip-time";
 
 export const Route = createFileRoute("/_authed/")({
   head: () => ({
@@ -49,6 +49,7 @@ function RequestScreen() {
     lat: null,
     lng: null,
   });
+  const [date, setDate] = useState(todayLocalDateString());
   const [time, setTime] = useState("22:45");
   const [mode, setMode] = useState<"bus" | "car">("bus");
   const [formError, setFormError] = useState<string | null>(null);
@@ -65,7 +66,7 @@ function RequestScreen() {
         destination: destination.address,
         destination_lat: destination.lat,
         destination_lng: destination.lng,
-        requested_time: nextOccurrenceOf(time).toISOString(),
+        requested_time: combineDateAndTime(date, time).toISOString(),
         mode,
       });
       if (error) throw error;
@@ -199,6 +200,22 @@ function RequestScreen() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label
+                htmlFor="date"
+                className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+              >
+                Date
+              </label>
+              <input
+                id="date"
+                type="date"
+                min={todayLocalDateString()}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-[12px] bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200"
+              />
+            </div>
+            <div className="space-y-1">
+              <label
                 htmlFor="time"
                 className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
               >
@@ -212,34 +229,35 @@ function RequestScreen() {
                 className="w-full rounded-[12px] bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200"
               />
             </div>
-            <div className="space-y-1">
-              <span className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                Mode
-              </span>
-              <div className="flex rounded-[12px] bg-zinc-100 p-1 ring-1 ring-zinc-200">
-                <button
-                  type="button"
-                  onClick={() => setMode("bus")}
-                  className={
-                    mode === "bus"
-                      ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
-                      : "flex-1 py-2 text-xs font-medium text-zinc-500"
-                  }
-                >
-                  Bus
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("car")}
-                  className={
-                    mode === "car"
-                      ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
-                      : "flex-1 py-2 text-xs font-medium text-zinc-500"
-                  }
-                >
-                  Car
-                </button>
-              </div>
+          </div>
+
+          <div className="space-y-1">
+            <span className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              Mode
+            </span>
+            <div className="flex rounded-[12px] bg-zinc-100 p-1 ring-1 ring-zinc-200">
+              <button
+                type="button"
+                onClick={() => setMode("bus")}
+                className={
+                  mode === "bus"
+                    ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
+                    : "flex-1 py-2 text-xs font-medium text-zinc-500"
+                }
+              >
+                Bus
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("car")}
+                className={
+                  mode === "car"
+                    ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
+                    : "flex-1 py-2 text-xs font-medium text-zinc-500"
+                }
+              >
+                Car
+              </button>
             </div>
           </div>
         </div>

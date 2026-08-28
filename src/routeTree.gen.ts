@@ -17,6 +17,7 @@ import { Route as AuthedTripsRouteImport } from './routes/_authed/trips'
 import { Route as GuestLoginRouteImport } from './routes/_guest/login'
 import { Route as GuestSignupRouteImport } from './routes/_guest/signup'
 import { Route as AuthedProfileUserIdRouteImport } from './routes/_authed/profile.$userId'
+import { Route as AuthedMessagesThreadTypeThreadIdRouteImport } from './routes/_authed/messages.$threadType.$threadId'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -56,6 +57,12 @@ const AuthedProfileUserIdRoute = AuthedProfileUserIdRouteImport.update({
   path: '/profile/$userId',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedMessagesThreadTypeThreadIdRoute =
+  AuthedMessagesThreadTypeThreadIdRouteImport.update({
+    id: '/messages/$threadType/$threadId',
+    path: '/messages/$threadType/$threadId',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof GuestLoginRoute
   '/signup': typeof GuestSignupRoute
   '/profile/$userId': typeof AuthedProfileUserIdRoute
+  '/messages/$threadType/$threadId': typeof AuthedMessagesThreadTypeThreadIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthedIndexRoute
@@ -72,6 +80,7 @@ export interface FileRoutesByTo {
   '/login': typeof GuestLoginRoute
   '/signup': typeof GuestSignupRoute
   '/profile/$userId': typeof AuthedProfileUserIdRoute
+  '/messages/$threadType/$threadId': typeof AuthedMessagesThreadTypeThreadIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -83,13 +92,27 @@ export interface FileRoutesById {
   '/_guest/signup': typeof GuestSignupRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/profile/$userId': typeof AuthedProfileUserIdRoute
+  '/_authed/messages/$threadType/$threadId': typeof AuthedMessagesThreadTypeThreadIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/browse' | '/trips' | '/login' | '/signup' | '/profile/$userId'
+    | '/'
+    | '/browse'
+    | '/trips'
+    | '/login'
+    | '/signup'
+    | '/profile/$userId'
+    | '/messages/$threadType/$threadId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/browse' | '/trips' | '/login' | '/signup' | '/profile/$userId'
+  to:
+    | '/'
+    | '/browse'
+    | '/trips'
+    | '/login'
+    | '/signup'
+    | '/profile/$userId'
+    | '/messages/$threadType/$threadId'
   id:
     | '__root__'
     | '/_authed'
@@ -100,6 +123,7 @@ export interface FileRouteTypes {
     | '/_guest/signup'
     | '/_authed/'
     | '/_authed/profile/$userId'
+    | '/_authed/messages/$threadType/$threadId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -165,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedProfileUserIdRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/messages/$threadType/$threadId': {
+      id: '/_authed/messages/$threadType/$threadId'
+      path: '/messages/$threadType/$threadId'
+      fullPath: '/messages/$threadType/$threadId'
+      preLoaderRoute: typeof AuthedMessagesThreadTypeThreadIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
@@ -173,6 +204,7 @@ interface AuthedRouteChildren {
   AuthedTripsRoute: typeof AuthedTripsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedProfileUserIdRoute: typeof AuthedProfileUserIdRoute
+  AuthedMessagesThreadTypeThreadIdRoute: typeof AuthedMessagesThreadTypeThreadIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -180,6 +212,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedTripsRoute: AuthedTripsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedProfileUserIdRoute: AuthedProfileUserIdRoute,
+  AuthedMessagesThreadTypeThreadIdRoute: AuthedMessagesThreadTypeThreadIdRoute,
 }
 
 const AuthedRouteWithChildren =

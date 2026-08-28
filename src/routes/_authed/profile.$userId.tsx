@@ -20,6 +20,10 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 
+function formatMemberSince(iso: string) {
+  return new Date(iso).toLocaleDateString([], { month: "long", year: "numeric" });
+}
+
 function ProfileScreen() {
   const { userId } = Route.useParams();
   const { user } = useAuth();
@@ -70,7 +74,7 @@ function ProfileScreen() {
   const given = (ratingActivity.data ?? []).filter((r) => r.direction === "given");
 
   return (
-    <PhoneShell>
+    <PhoneShell {...(isOwnProfile ? { active: "profile" as const } : {})}>
       <header className="flex items-center gap-3 p-6 pb-4">
         <button
           type="button"
@@ -106,6 +110,11 @@ function ProfileScreen() {
               {" · "}
               {stats.data.rides_given} {stats.data.rides_given === 1 ? "ride given" : "rides given"}
             </p>
+            {stats.data.member_since ? (
+              <p className="text-[11px] text-zinc-400">
+                Member since {formatMemberSince(stats.data.member_since)}
+              </p>
+            ) : null}
           </div>
         )}
 

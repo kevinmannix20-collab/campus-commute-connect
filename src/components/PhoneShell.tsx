@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Home, Navigation, Search, type LucideIcon } from "lucide-react";
+import { Home, Navigation, Search, User, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 
 function NavItem({
   to,
@@ -54,8 +55,10 @@ export function PhoneShell({
   active,
 }: {
   children: ReactNode;
-  active?: "home" | "browse" | "status";
+  active?: "home" | "browse" | "status" | "profile";
 }) {
+  const { user } = useAuth();
+
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-100 p-4 font-sans text-zinc-900 selection:bg-forest/10 md:p-8">
       <section className="relative flex h-[720px] w-full max-w-[375px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-sand shadow-xl shadow-zinc-900/5 ring-1 ring-black/5">
@@ -65,6 +68,26 @@ export function PhoneShell({
           <NavItem to="/" label="Home" icon={Home} active={active === "home"} />
           <NavItem to="/browse" label="Browse" icon={Search} active={active === "browse"} />
           <NavItem to="/trips" label="Status" icon={Navigation} active={active === "status"} />
+          {user ? (
+            <Link
+              to="/profile/$userId"
+              params={{ userId: user.id }}
+              className={
+                active === "profile"
+                  ? "flex flex-col items-center gap-1 text-forest"
+                  : "flex flex-col items-center gap-1 text-zinc-400"
+              }
+            >
+              <User className="size-5" strokeWidth={active === "profile" ? 2.5 : 2} />
+              <span
+                className={
+                  active === "profile" ? "text-[9px] font-semibold" : "text-[9px] font-medium"
+                }
+              >
+                Profile
+              </span>
+            </Link>
+          ) : null}
         </nav>
       </section>
     </div>
