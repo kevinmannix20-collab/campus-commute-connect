@@ -12,10 +12,16 @@ export function loadGoogleMaps(): Promise<boolean> {
 
   if (loadPromise) return loadPromise;
 
-  const apiKey = import.meta.env["VITE_GOOGLE_MAPS_API_KEY"];
+  // Lovable's Secrets store rejects VITE_-prefixed names (see
+  // src/integrations/supabase/config.ts for the same issue with the
+  // Supabase keys) — APP_GOOGLE_MAPS_API_KEY is the settable fallback for
+  // that deployment; VITE_GOOGLE_MAPS_API_KEY still works for local dev
+  // via .env.local.
+  const apiKey =
+    import.meta.env["VITE_GOOGLE_MAPS_API_KEY"] || process.env["APP_GOOGLE_MAPS_API_KEY"];
   if (!apiKey) {
     console.warn(
-      "[google-maps] VITE_GOOGLE_MAPS_API_KEY is not set — falling back to plain text location inputs. See README for setup.",
+      "[google-maps] No API key set (VITE_GOOGLE_MAPS_API_KEY / APP_GOOGLE_MAPS_API_KEY) — falling back to plain text location inputs. See README for setup.",
     );
     loadPromise = Promise.resolve(false);
     return loadPromise;

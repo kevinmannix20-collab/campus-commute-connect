@@ -43,5 +43,6 @@ falls back to plain text location fields and no map.
    - **Geocoding API** — used to turn "current location" coordinates back into a readable address.
 3. Under **Credentials**, create a new API key.
 4. Restrict the key to **HTTP referrers**, and add this app's deployed domain(s) plus `localhost:8080` for local dev. This key is visible in the browser by design (client-side Maps libraries require it) — the referrer restriction is what keeps it from being usable elsewhere.
-5. Add it as `VITE_GOOGLE_MAPS_API_KEY` in a `.env.local` file at the repo root (see `.env.example`), and as an environment variable in your hosting platform for production. The `VITE_` prefix is required for Vite to expose it to browser code.
-6. Billing must be enabled on the project for these APIs to work, but Google applies a $200/month credit automatically — at this app's expected usage, cost should be $0.
+5. For local dev, add it as `VITE_GOOGLE_MAPS_API_KEY` in a `.env.local` file at the repo root (see `.env.example`). The `VITE_` prefix is required for Vite to expose it to browser code.
+6. For the Lovable-hosted deployment, add it as **`APP_GOOGLE_MAPS_API_KEY`** in Lovable's Secrets instead — Lovable's Secrets store rejects `VITE_`-prefixed names (see the same workaround already used for the Supabase keys in `src/integrations/supabase/config.ts`). The app checks `VITE_GOOGLE_MAPS_API_KEY` first, then falls back to `APP_GOOGLE_MAPS_API_KEY`, so either name works depending on where you're setting it.
+7. Billing must be enabled on the project for these APIs to work, but Google applies a $200/month credit automatically — at this app's expected usage, cost should be $0.
