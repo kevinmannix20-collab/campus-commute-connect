@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import david from "../assets/student-david.jpg";
-import emma from "../assets/student-emma.jpg";
-import sarah from "../assets/student-sarah.jpg";
-import { PhoneShell } from "../components/PhoneShell";
+import david from "@/assets/student-david.jpg";
+import emma from "@/assets/student-emma.jpg";
+import sarah from "@/assets/student-sarah.jpg";
+import { PhoneShell } from "@/components/PhoneShell";
 
-export const Route = createFileRoute("/browse")({
+export const Route = createFileRoute("/_authed/browse")({
   head: () => ({
     meta: [
       { title: "Open Commutes — Commute Mate" },

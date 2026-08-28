@@ -9,86 +9,177 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as BrowseRouteImport } from './routes/browse'
-import { Route as TripsRouteImport } from './routes/trips'
+import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as GuestRouteImport } from './routes/_guest'
+import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as AuthedBrowseRouteImport } from './routes/_authed/browse'
+import { Route as AuthedTripsRouteImport } from './routes/_authed/trips'
+import { Route as GuestLoginRouteImport } from './routes/_guest/login'
+import { Route as GuestSignupRouteImport } from './routes/_guest/signup'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuestRoute = GuestRouteImport.update({
+  id: '/_guest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthedRoute,
 } as any)
-const BrowseRoute = BrowseRouteImport.update({
+const AuthedBrowseRoute = AuthedBrowseRouteImport.update({
   id: '/browse',
   path: '/browse',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthedRoute,
 } as any)
-const TripsRoute = TripsRouteImport.update({
+const AuthedTripsRoute = AuthedTripsRouteImport.update({
   id: '/trips',
   path: '/trips',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthedRoute,
+} as any)
+const GuestLoginRoute = GuestLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => GuestRoute,
+} as any)
+const GuestSignupRoute = GuestSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => GuestRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/browse': typeof BrowseRoute
-  '/trips': typeof TripsRoute
+  '/': typeof AuthedIndexRoute
+  '/browse': typeof AuthedBrowseRoute
+  '/trips': typeof AuthedTripsRoute
+  '/login': typeof GuestLoginRoute
+  '/signup': typeof GuestSignupRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/browse': typeof BrowseRoute
-  '/trips': typeof TripsRoute
+  '/': typeof AuthedIndexRoute
+  '/browse': typeof AuthedBrowseRoute
+  '/trips': typeof AuthedTripsRoute
+  '/login': typeof GuestLoginRoute
+  '/signup': typeof GuestSignupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/browse': typeof BrowseRoute
-  '/trips': typeof TripsRoute
+  '/_authed': typeof AuthedRouteWithChildren
+  '/_guest': typeof GuestRouteWithChildren
+  '/_authed/browse': typeof AuthedBrowseRoute
+  '/_authed/trips': typeof AuthedTripsRoute
+  '/_guest/login': typeof GuestLoginRoute
+  '/_guest/signup': typeof GuestSignupRoute
+  '/_authed/': typeof AuthedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/browse' | '/trips'
+  fullPaths: '/' | '/browse' | '/trips' | '/login' | '/signup'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/browse' | '/trips'
-  id: '__root__' | '/' | '/browse' | '/trips'
+  to: '/' | '/browse' | '/trips' | '/login' | '/signup'
+  id:
+    | '__root__'
+    | '/_authed'
+    | '/_guest'
+    | '/_authed/browse'
+    | '/_authed/trips'
+    | '/_guest/login'
+    | '/_guest/signup'
+    | '/_authed/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BrowseRoute: typeof BrowseRoute
-  TripsRoute: typeof TripsRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
+  GuestRoute: typeof GuestRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_guest': {
+      id: '/_guest'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof GuestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/': {
+      id: '/_authed/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthedIndexRouteImport
+      parentRoute: typeof AuthedRoute
     }
-    '/browse': {
-      id: '/browse'
+    '/_authed/browse': {
+      id: '/_authed/browse'
       path: '/browse'
       fullPath: '/browse'
-      preLoaderRoute: typeof BrowseRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthedBrowseRouteImport
+      parentRoute: typeof AuthedRoute
     }
-    '/trips': {
-      id: '/trips'
+    '/_authed/trips': {
+      id: '/_authed/trips'
       path: '/trips'
       fullPath: '/trips'
-      preLoaderRoute: typeof TripsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthedTripsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_guest/login': {
+      id: '/_guest/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof GuestLoginRouteImport
+      parentRoute: typeof GuestRoute
+    }
+    '/_guest/signup': {
+      id: '/_guest/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof GuestSignupRouteImport
+      parentRoute: typeof GuestRoute
     }
   }
 }
 
+interface AuthedRouteChildren {
+  AuthedBrowseRoute: typeof AuthedBrowseRoute
+  AuthedTripsRoute: typeof AuthedTripsRoute
+  AuthedIndexRoute: typeof AuthedIndexRoute
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedBrowseRoute: AuthedBrowseRoute,
+  AuthedTripsRoute: AuthedTripsRoute,
+  AuthedIndexRoute: AuthedIndexRoute,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
+interface GuestRouteChildren {
+  GuestLoginRoute: typeof GuestLoginRoute
+  GuestSignupRoute: typeof GuestSignupRoute
+}
+
+const GuestRouteChildren: GuestRouteChildren = {
+  GuestLoginRoute: GuestLoginRoute,
+  GuestSignupRoute: GuestSignupRoute,
+}
+
+const GuestRouteWithChildren = GuestRoute._addFileChildren(GuestRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BrowseRoute: BrowseRoute,
-  TripsRoute: TripsRoute,
+  AuthedRoute: AuthedRouteWithChildren,
+  GuestRoute: GuestRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

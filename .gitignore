@@ -37,3 +37,6 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# npm lockfile (this project uses bun.lock as the canonical lockfile)
+package-lock.json

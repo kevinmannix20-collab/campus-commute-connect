@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import marcus from "../assets/student-marcus.jpg";
-import { PhoneShell } from "../components/PhoneShell";
+import marcus from "@/assets/student-marcus.jpg";
+import { PhoneShell } from "@/components/PhoneShell";
 
-export const Route = createFileRoute("/trips")({
+export const Route = createFileRoute("/_authed/trips")({
   head: () => ({
     meta: [
       { title: "Your Journey — Commute Mate" },

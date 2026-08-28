@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import campusMap from "../assets/campus-map.jpg";
-import { PhoneShell } from "../components/PhoneShell";
+import campusMap from "@/assets/campus-map.jpg";
+import { PhoneShell } from "@/components/PhoneShell";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authed/")({
   head: () => ({
     meta: [
       { title: "Commute Mate — Find a travel mate to campus" },
