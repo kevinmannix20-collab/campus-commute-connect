@@ -82,6 +82,7 @@ export type Database = {
           status: string;
           completed_at: string | null;
           completed_by: string | null;
+          driver_user_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -91,6 +92,7 @@ export type Database = {
           status?: string;
           completed_at?: string | null;
           completed_by?: string | null;
+          driver_user_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -100,6 +102,7 @@ export type Database = {
           status?: string;
           completed_at?: string | null;
           completed_by?: string | null;
+          driver_user_id?: string | null;
           created_at?: string;
         };
         Relationships: [
@@ -168,6 +171,10 @@ export type Database = {
           id: string;
           trip_request_id_a: string;
           trip_request_id_b: string;
+          status: string;
+          completed_at: string | null;
+          completed_by: string | null;
+          driver_user_id: string | null;
           created_at: string;
         };
       };
@@ -184,6 +191,7 @@ export type Database = {
           requester_display_name: string;
           requester_average_stars: number | null;
           requester_completed_trip_count: number;
+          requester_rides_given: number;
         }[];
       };
       my_matches: {
@@ -234,6 +242,7 @@ export type Database = {
           full_name: string;
           average_stars: number | null;
           completed_trip_count: number;
+          rides_given: number;
         }[];
       };
       profile_reviews: {

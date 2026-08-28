@@ -4,8 +4,10 @@ import { ArrowLeft } from "lucide-react";
 
 import { PhoneShell } from "@/components/PhoneShell";
 import { StarDisplay } from "@/components/StarRating";
+import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { driverTier } from "@/lib/priorityScore";
 
 export const Route = createFileRoute("/_authed/profile/$userId")({
   head: () => ({
@@ -90,14 +92,19 @@ function ProfileScreen() {
           <p className="p-4 text-center text-xs text-zinc-400">Profile not found.</p>
         ) : (
           <div className="space-y-3 rounded-[20px] bg-zinc-50 p-5 ring-1 ring-zinc-950/5">
-            <StarDisplay
-              average={stats.data.average_stars}
-              emptyLabel="No ratings yet"
-              className="inline-flex items-center gap-1.5 text-base font-semibold text-zinc-900"
-            />
+            <div className="flex items-center gap-2">
+              <StarDisplay
+                average={stats.data.average_stars}
+                emptyLabel="No ratings yet"
+                className="inline-flex items-center gap-1.5 text-base font-semibold text-zinc-900"
+              />
+              <TierBadge tier={driverTier(stats.data.average_stars, stats.data.rides_given)} />
+            </div>
             <p className="text-xs text-zinc-500">
               {stats.data.completed_trip_count}{" "}
               {stats.data.completed_trip_count === 1 ? "completed trip" : "completed trips"}
+              {" · "}
+              {stats.data.rides_given} {stats.data.rides_given === 1 ? "ride given" : "rides given"}
             </p>
           </div>
         )}

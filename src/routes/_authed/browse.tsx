@@ -4,8 +4,10 @@ import { useEffect } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
 import { StarDisplay } from "@/components/StarRating";
+import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { driverTier, priorityScore } from "@/lib/priorityScore";
 
 export const Route = createFileRoute("/_authed/browse")({
   head: () => ({
@@ -81,15 +83,19 @@ function BrowseScreen() {
     };
   }, [queryClient]);
 
-  // Higher-rated requesters first; unrated ("New driver") ones sink to the
-  // bottom rather than looking penalized with a visible "0 stars". Stable
-  // sort preserves the RPC's created_at-desc order within each group.
-  const sortedRequests = [...(openRequests.data ?? [])].sort((a, b) => {
-    if (a.requester_average_stars === null && b.requester_average_stars === null) return 0;
-    if (a.requester_average_stars === null) return 1;
-    if (b.requester_average_stars === null) return -1;
-    return b.requester_average_stars - a.requester_average_stars;
-  });
+  // Sorted by priority score (rating quality + driving volume, see
+  // priorityScore.ts) descending — this is also how a frequent driver's
+  // own ride request gets surfaced ahead of a first-timer's ("reciprocal
+  // karma"): their score is computed from their history as a driver even
+  // though they're requesting as a rider right now. A brand-new user with
+  // no ratings and no rides given naturally scores 0 and sinks to the
+  // bottom without needing a special case. Stable sort preserves the
+  // RPC's created_at-desc order within ties.
+  const sortedRequests = [...(openRequests.data ?? [])].sort(
+    (a, b) =>
+      priorityScore(b.requester_average_stars, b.requester_rides_given) -
+      priorityScore(a.requester_average_stars, a.requester_rides_given),
+  );
 
   const matchWith = async (theirRequestId: string) => {
     if (!myOpenRequest.data) return;
@@ -137,8 +143,18 @@ function BrowseScreen() {
                   <div className="flex size-8 items-center justify-center rounded-[10px] bg-forest/10 text-xs font-semibold text-forest outline-1 -outline-offset-1 outline-black/5">
                     {request.requester_display_name.charAt(0) || "?"}
                   </div>
-                  <span className="flex flex-col">
-                    <span className="text-sm font-semibold">{request.requester_display_name}</span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold">
+                        {request.requester_display_name}
+                      </span>
+                      <TierBadge
+                        tier={driverTier(
+                          request.requester_average_stars,
+                          request.requester_rides_given,
+                        )}
+                      />
+                    </span>
                     <StarDisplay
                       average={request.requester_average_stars}
                       emptyLabel="New driver"
