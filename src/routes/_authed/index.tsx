@@ -1,8 +1,12 @@
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import campusMap from "@/assets/campus-map.jpg";
 import { PhoneShell } from "@/components/PhoneShell";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { nextOccurrenceOf } from "@/lib/trip-time";
 
 export const Route = createFileRoute("/_authed/")({
   head: () => ({
@@ -24,12 +28,44 @@ export const Route = createFileRoute("/_authed/")({
   component: RequestScreen,
 });
 
+const STARTING_POINT = "Main Campus Library";
+
 function RequestScreen() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [destination, setDestination] = useState("");
   const [time, setTime] = useState("22:45");
   const [mode, setMode] = useState<"bus" | "car">("bus");
-  const [searching, setSearching] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const submitRequest = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("trip_requests").insert({
+        user_id: user.id,
+        starting_point: STARTING_POINT,
+        destination,
+        requested_time: nextOccurrenceOf(time).toISOString(),
+        mode,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      navigate({ to: "/trips" });
+    },
+    onError: (error) => {
+      setFormError(error instanceof Error ? error.message : "Something went wrong");
+    },
+  });
+
+  const handleSubmit = () => {
+    setFormError(null);
+    if (!destination.trim()) {
+      setFormError("Enter a destination first");
+      return;
+    }
+    submitRequest.mutate();
+  };
 
   return (
     <PhoneShell active="home">
@@ -47,7 +83,7 @@ function RequestScreen() {
             </label>
             <div className="flex w-full items-center gap-3 rounded-[12px] bg-zinc-50 px-4 py-3 ring-1 ring-zinc-200">
               <div className="size-2 rounded-full bg-forest" />
-              <span className="text-sm text-zinc-900">Main Campus Library</span>
+              <span className="text-sm text-zinc-900">{STARTING_POINT}</span>
             </div>
           </div>
 
@@ -143,20 +179,20 @@ function RequestScreen() {
             }
           />
           <span>
-            {searching
-              ? "Searching for a match — we'll notify you"
-              : "Matching you with nearby companions..."}
+            {formError
+              ? formError
+              : submitRequest.isPending
+                ? "Posting your request…"
+                : "Post a request and we'll look for a match"}
           </span>
         </div>
         <button
           type="button"
-          onClick={() => {
-            setSearching(true);
-            setTimeout(() => navigate({ to: "/trips" }), 900);
-          }}
-          className="w-full rounded-[16px] bg-forest py-3 text-sm font-medium text-sand ring-2 ring-forest ring-offset-2 transition-transform active:scale-[0.98]"
+          onClick={handleSubmit}
+          disabled={submitRequest.isPending}
+          className="w-full rounded-[16px] bg-forest py-3 text-sm font-medium text-sand ring-2 ring-forest ring-offset-2 transition-transform active:scale-[0.98] disabled:opacity-60"
         >
-          {searching ? "Looking for a mate…" : "Find a Travel Mate"}
+          {submitRequest.isPending ? "Looking for a mate…" : "Find a Travel Mate"}
         </button>
       </div>
     </PhoneShell>
