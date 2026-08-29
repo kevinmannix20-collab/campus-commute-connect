@@ -9,6 +9,7 @@ type Props = {
   value: string;
   onTextChange: (text: string) => void;
   onPlaceSelected: (place: ResolvedPlace) => void;
+  onBlur?: () => void;
   placeholder?: string;
   className?: string;
 };
@@ -23,6 +24,7 @@ export function PlaceAutocompleteInput({
   value,
   onTextChange,
   onPlaceSelected,
+  onBlur,
   placeholder,
   className,
 }: Props) {
@@ -76,6 +78,7 @@ export function PlaceAutocompleteInput({
         lastResolvedAddressRef.current = null;
         onTextChangeRef.current(e.target.value);
       }}
+      onBlur={onBlur}
       placeholder={placeholder}
       autoComplete="off"
       className={className}

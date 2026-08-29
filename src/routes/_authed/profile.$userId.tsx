@@ -1,9 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, Award, Car, GraduationCap, Leaf, MessageCircle, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  Award,
+  Car,
+  GraduationCap,
+  Home,
+  Leaf,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
+import { PlaceAutocompleteInput } from "@/components/PlaceAutocompleteInput";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { StarDisplay } from "@/components/StarRating";
 import { TierBadge } from "@/components/TierBadge";
@@ -71,6 +81,58 @@ function ProfileScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile-stats", userId] });
+    },
+  });
+
+  // Kept out of profile_stats() — a home address isn't public, so it's read
+  // via a direct table select, which profiles_select_own already restricts
+  // to the caller's own row (this query only runs for isOwnProfile anyway).
+  const homeAddressQuery = useQuery({
+    queryKey: ["my-home-address"],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("home_address, home_lat, home_lng")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOwnProfile,
+  });
+
+  const [homeAddress, setHomeAddress] = useState("");
+  // Selecting a suggestion already saves (with resolved lat/lng) and then
+  // blurs the field as a side effect — without this flag, that blur would
+  // immediately re-save the same address with lat/lng nulled out.
+  const homeAddressDirtyRef = useRef(false);
+  // Hydrate local state from the server exactly once. Without this guard,
+  // a slow first fetch resolving after the user has already started typing
+  // would stomp their in-progress edit back to the fetched (stale) value.
+  const homeAddressInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOwnProfile || !homeAddressQuery.data || homeAddressInitializedRef.current) return;
+    homeAddressInitializedRef.current = true;
+    setHomeAddress(homeAddressQuery.data.home_address ?? "");
+  }, [isOwnProfile, homeAddressQuery.data]);
+
+  const saveHomeAddress = useMutation({
+    mutationFn: async (next: { address: string; lat: number | null; lng: number | null }) => {
+      if (!user) return;
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          home_address: next.address || null,
+          home_lat: next.lat,
+          home_lng: next.lng,
+        })
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-home-address"] });
     },
   });
 
@@ -299,6 +361,41 @@ function ProfileScreen() {
                   {stats.data.degree_pursuit === "Alumni" && stats.data.graduation_year
                     ? ` '${String(stats.data.graduation_year).slice(-2)}`
                     : ""}
+                </p>
+              </div>
+            ) : null}
+
+            {isOwnProfile ? (
+              <div className="rounded-[20px] bg-zinc-50 p-4 ring-1 ring-zinc-950/5">
+                <div className="mb-3 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                  <Home className="size-3.5" />
+                  Home Address
+                </div>
+                <PlaceAutocompleteInput
+                  value={homeAddress}
+                  onTextChange={(text) => {
+                    homeAddressDirtyRef.current = true;
+                    setHomeAddress(text);
+                  }}
+                  onPlaceSelected={(place) => {
+                    homeAddressDirtyRef.current = false;
+                    setHomeAddress(place.address);
+                    saveHomeAddress.mutate({
+                      address: place.address,
+                      lat: place.lat,
+                      lng: place.lng,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (!homeAddressDirtyRef.current) return;
+                    homeAddressDirtyRef.current = false;
+                    saveHomeAddress.mutate({ address: homeAddress, lat: null, lng: null });
+                  }}
+                  placeholder="Where do you live?"
+                  className="w-full rounded-[10px] bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
+                />
+                <p className="mt-1.5 text-[10px] text-zinc-400">
+                  Used to show how far each posting is from home in the browse feed.
                 </p>
               </div>
             ) : null}

@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Navigation } from "lucide-react";
 import { useEffect } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
@@ -8,6 +9,7 @@ import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { driverTier } from "@/lib/priorityScore";
+import { useHomeDistances } from "@/lib/use-home-distances";
 
 export const Route = createFileRoute("/_authed/browse")({
   head: () => ({
@@ -56,16 +58,16 @@ function BrowseScreen() {
     },
   });
 
-  // Own school, so posting cards can flag classmates at a glance — plain
-  // table select (not an RPC) since profiles_select_own lets a user read
-  // only their own row directly.
+  // Own school + home address, so posting cards can flag classmates and show
+  // distance from home at a glance — plain table select (not an RPC) since
+  // profiles_select_own lets a user read only their own row directly.
   const myProfile = useQuery({
     queryKey: ["my-school-info"],
     queryFn: async () => {
       if (!user) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("school")
+        .select("school, home_lat, home_lng")
         .eq("id", user.id)
         .single();
       if (error) throw error;
@@ -73,6 +75,20 @@ function BrowseScreen() {
     },
     enabled: !!user,
   });
+
+  const homeCoords =
+    myProfile.data?.home_lat != null && myProfile.data?.home_lng != null
+      ? { lat: myProfile.data.home_lat, lng: myProfile.data.home_lng }
+      : null;
+
+  const homeDistances = useHomeDistances(
+    homeCoords,
+    (openRequests.data ?? []).map((r) => ({
+      id: r.id,
+      lat: r.destination_lat,
+      lng: r.destination_lng,
+    })),
+  );
 
   // My own open request, if any — needed to call create_match, since a
   // match always pairs the caller's own open request with someone else's.
@@ -226,9 +242,17 @@ function BrowseScreen() {
                   <span className="size-1.5 rounded-full border border-forest" />
                   From: {request.starting_point}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-zinc-500">
-                  <span className="size-1.5 rounded-full bg-forest" />
-                  To: {request.destination}
+                <div className="flex items-center justify-between gap-2 text-xs text-zinc-500">
+                  <span className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-forest" />
+                    To: {request.destination}
+                  </span>
+                  {homeDistances[request.id] ? (
+                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                      <Navigation className="size-2.5" />
+                      {homeDistances[request.id]} from home
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <span className="size-1.5 rounded-full bg-zinc-300" />

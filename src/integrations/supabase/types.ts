@@ -17,6 +17,9 @@ export type Database = {
           school: string | null;
           degree_pursuit: string | null;
           graduation_year: number | null;
+          home_address: string | null;
+          home_lat: number | null;
+          home_lng: number | null;
         };
         Insert: {
           id: string;
@@ -26,6 +29,9 @@ export type Database = {
           school?: string | null;
           degree_pursuit?: string | null;
           graduation_year?: number | null;
+          home_address?: string | null;
+          home_lat?: number | null;
+          home_lng?: number | null;
         };
         Update: {
           id?: string;
@@ -35,6 +41,9 @@ export type Database = {
           school?: string | null;
           degree_pursuit?: string | null;
           graduation_year?: number | null;
+          home_address?: string | null;
+          home_lat?: number | null;
+          home_lng?: number | null;
         };
         Relationships: [];
       };
@@ -355,6 +364,8 @@ export type Database = {
           requester_id: string;
           starting_point: string;
           destination: string;
+          destination_lat: number | null;
+          destination_lng: number | null;
           requested_time: string;
           mode: string;
           created_at: string;
