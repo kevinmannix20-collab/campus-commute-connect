@@ -46,3 +46,48 @@ falls back to plain text location fields and no map.
 5. For local dev, add it as `VITE_GOOGLE_MAPS_API_KEY` in a `.env.local` file at the repo root (see `.env.example`). The `VITE_` prefix is required for Vite to expose it to browser code.
 6. For the Lovable-hosted deployment, add it as **`APP_GOOGLE_MAPS_API_KEY`** in Lovable's Secrets instead — Lovable's Secrets store rejects `VITE_`-prefixed names (see the same workaround already used for the Supabase keys in `src/integrations/supabase/config.ts`). The app checks `VITE_GOOGLE_MAPS_API_KEY` first, then falls back to `APP_GOOGLE_MAPS_API_KEY`, so either name works depending on where you're setting it.
 7. Billing must be enabled on the project for these APIs to work, but Google applies a $200/month credit automatically — at this app's expected usage, cost should be $0.
+
+## AI match ranking setup
+
+Once someone's trip request has 2+ open candidates (other students whose posts already passed
+the hard filters — open, not expired, not their own), the Browse page calls a Supabase Edge
+Function (`supabase/functions/rank-matches`) that asks OpenAI to rank them by soft compatibility
+(shared hobbies, conversation style, comfort preferences, career interests) using the profile
+enrichment data, and shows a short reason on each card. With 0-1 candidates this is skipped
+entirely — there's nothing to rank, and no AI-sourced text is shown.
+
+This has to run server-side: the app is a plain Vite/React frontend with no Node/Next.js server
+layer, so an OpenAI key can't live in client code the way the Google Maps key does (that one is
+restricted by HTTP referrer instead; OpenAI keys can't be restricted that way). The edge function
+also uses the Supabase **service-role** key (available to edge functions automatically, not a
+secret you set) to read other students' `profile_details` rows — those are private via RLS to
+everyone except the function itself, which only forwards the fields a person actually filled in
+to OpenAI, never null placeholders.
+
+1. Get an API key from the [OpenAI platform](https://platform.openai.com/api-keys).
+2. Set it as a secret on your Supabase project (never commit this key, never put it in `.env*`):
+   ```sh
+   supabase secrets set OPENAI_API_KEY=your-key-here
+   ```
+3. Deploy the function:
+   ```sh
+   supabase functions deploy rank-matches
+   ```
+4. Re-run step 2 (`secrets set`) any time the key changes — the deployed function picks it up
+   without needing to be redeployed.
+
+If the function isn't deployed, the secret isn't set, or OpenAI errors/times out, Browse falls
+back to the plain hard-filtered list with no reason text rather than breaking — see the comment
+at the top of `supabase/functions/rank-matches/index.ts` for the full failure-handling design.
+
+### Demo/seed profiles
+
+`supabase/seed-demo-profiles.sql` creates six `demo-*@ucla.edu` test accounts (password
+`DemoPass123!`) with a mix of rich and empty enrichment profiles and open trip requests, so the
+ranking flow can be exercised without manual data entry. Run it against a **sandbox** project only:
+
+```sh
+supabase db query -f supabase/seed-demo-profiles.sql --linked
+```
+
+It's idempotent (deletes and recreates the same `demo-*` accounts each time it's run).

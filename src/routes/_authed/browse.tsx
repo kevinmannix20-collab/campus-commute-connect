@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MessageCircle, Navigation } from "lucide-react";
+import { MessageCircle, Navigation, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
@@ -129,7 +129,60 @@ function BrowseScreen() {
 
   // open_trip_requests() already orders by requested_time ascending and
   // excludes past ones — soonest trip first, nothing stale left to filter.
-  const sortedRequests = openRequests.data ?? [];
+  const hardFilteredRequests = openRequests.data ?? [];
+
+  // AI ranking is a soft layer on top of the hard filter above, which
+  // already guarantees every candidate here is valid (open, not past, not
+  // the viewer's own). With 0-1 candidates there's nothing meaningful to
+  // rank, so the query below is disabled entirely and the plain
+  // hard-filtered order is used as-is — no "AI checked this" reason line
+  // is ever shown in that case. Keyed on the candidate id set (not just
+  // count) so a changed lineup re-ranks.
+  const candidateIdsKey = hardFilteredRequests
+    .map((r) => r.id)
+    .sort()
+    .join(",");
+
+  const matchRanking = useQuery({
+    queryKey: ["match-ranking", user?.id, candidateIdsKey],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke<{
+        rankings: { candidate_id: string; rank: number; reason: string | null }[];
+      }>("rank-matches", {
+        body: {
+          candidates: hardFilteredRequests.map((r) => ({
+            trip_request_id: r.id,
+            requester_id: r.requester_id,
+            starting_point: r.starting_point,
+            destination: r.destination,
+            mode: r.mode,
+            requested_time: r.requested_time,
+          })),
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    enabled: hardFilteredRequests.length >= 2,
+    // A failed/slow AI call should never block browsing — fall back to
+    // the plain hard-filtered order rather than retrying or erroring the page.
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const reasonByRequestId = new Map(
+    (matchRanking.data?.rankings ?? []).map((r) => [r.candidate_id, r.reason]),
+  );
+  const rankByRequestId = new Map(
+    (matchRanking.data?.rankings ?? []).map((r) => [r.candidate_id, r.rank]),
+  );
+
+  const sortedRequests =
+    matchRanking.data && !matchRanking.isError
+      ? [...hardFilteredRequests].sort(
+          (a, b) => (rankByRequestId.get(a.id) ?? 99) - (rankByRequestId.get(b.id) ?? 99),
+        )
+      : hardFilteredRequests;
 
   const matchWith = async (theirRequestId: string) => {
     if (!myOpenRequest.data) return;
@@ -271,6 +324,12 @@ function BrowseScreen() {
                   </div>
                 ) : null}
               </div>
+              {reasonByRequestId.get(request.id) ? (
+                <div className="flex items-start gap-1.5 rounded-[10px] bg-forest/5 px-2.5 py-2 text-[11px] text-forest">
+                  <Sparkles className="mt-0.5 size-3 shrink-0" />
+                  <span>{reasonByRequestId.get(request.id)}</span>
+                </div>
+              ) : null}
               {request.mode === "bus" ? (
                 <button
                   type="button"
