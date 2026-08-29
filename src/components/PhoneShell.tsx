@@ -1,9 +1,13 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Home, Navigation, Search, User, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+
+const notificationsQueryKey = ["my-notifications"];
 
 function NavItem({
   to,
@@ -58,6 +62,39 @@ export function PhoneShell({
   active?: "home" | "browse" | "status" | "profile";
 }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Same queryKey used on the profile page and the /messages inbox, so a
+  // read there (mark_thread_notifications_read, mark_all_notifications_read)
+  // invalidates this badge too instead of needing its own round trip.
+  const notifications = useQuery({
+    queryKey: notificationsQueryKey,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("my_notifications");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+  const unreadCount = (notifications.data ?? []).filter((n) => !n.read_at).length;
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("notifications-nav-badge")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: notificationsQueryKey });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, user]);
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-100 p-4 font-sans text-zinc-900 selection:bg-forest/10 md:p-8">
@@ -78,7 +115,14 @@ export function PhoneShell({
                   : "flex flex-col items-center gap-1 text-zinc-400"
               }
             >
-              <User className="size-5" strokeWidth={active === "profile" ? 2.5 : 2} />
+              <span className="relative">
+                <User className="size-5" strokeWidth={active === "profile" ? 2.5 : 2} />
+                {unreadCount > 0 ? (
+                  <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold leading-none text-white ring-2 ring-sand">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : null}
+              </span>
               <span
                 className={
                   active === "profile" ? "text-[9px] font-semibold" : "text-[9px] font-medium"
