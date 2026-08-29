@@ -7,7 +7,7 @@ import { StarDisplay } from "@/components/StarRating";
 import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { driverTier, priorityScore } from "@/lib/priorityScore";
+import { driverTier } from "@/lib/priorityScore";
 
 export const Route = createFileRoute("/_authed/browse")({
   head: () => ({
@@ -32,8 +32,15 @@ export const Route = createFileRoute("/_authed/browse")({
 const openRequestsQueryKey = ["open-trip-requests"];
 const myOpenRequestQueryKey = ["my-open-trip-request"];
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function formatDateTime(iso: string) {
+  const date = new Date(iso);
+  const datePart = date.toLocaleDateString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const timePart = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `${datePart} · ${timePart}`;
 }
 
 function BrowseScreen() {
@@ -104,19 +111,9 @@ function BrowseScreen() {
     };
   }, [queryClient]);
 
-  // Sorted by priority score (rating quality + driving volume, see
-  // priorityScore.ts) descending — this is also how a frequent driver's
-  // own ride request gets surfaced ahead of a first-timer's ("reciprocal
-  // karma"): their score is computed from their history as a driver even
-  // though they're requesting as a rider right now. A brand-new user with
-  // no ratings and no rides given naturally scores 0 and sinks to the
-  // bottom without needing a special case. Stable sort preserves the
-  // RPC's created_at-desc order within ties.
-  const sortedRequests = [...(openRequests.data ?? [])].sort(
-    (a, b) =>
-      priorityScore(b.requester_average_stars, b.requester_rides_given) -
-      priorityScore(a.requester_average_stars, a.requester_rides_given),
-  );
+  // open_trip_requests() already orders by requested_time ascending and
+  // excludes past ones — soonest trip first, nothing stale left to filter.
+  const sortedRequests = openRequests.data ?? [];
 
   const matchWith = async (theirRequestId: string) => {
     if (!myOpenRequest.data) return;
@@ -235,14 +232,8 @@ function BrowseScreen() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <span className="size-1.5 rounded-full bg-zinc-300" />
-                  Time: {formatTime(request.requested_time)}
+                  {formatDateTime(request.requested_time)}
                 </div>
-                {request.mode === "bus" ? (
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
-                    <span className="size-1.5 rounded-full bg-zinc-300" />
-                    {request.bus_member_count ?? 1}/6 joined
-                  </div>
-                ) : null}
                 {request.mode === "car" && request.companion_display_names?.length > 0 ? (
                   <div className="flex items-center gap-2 text-xs text-zinc-500">
                     <span className="size-1.5 rounded-full bg-zinc-300" />
