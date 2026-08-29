@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { ArrowLeft, MessageCircle } from "lucide-react";
 
 import { PhoneShell } from "@/components/PhoneShell";
 import { StarDisplay } from "@/components/StarRating";
 import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { computeProfileCompletion } from "@/lib/profile-completion";
 import { driverTier } from "@/lib/priorityScore";
 
 export const Route = createFileRoute("/_authed/profile/$userId")({
@@ -73,21 +74,70 @@ function ProfileScreen() {
 
   const given = (ratingActivity.data ?? []).filter((r) => r.direction === "given");
 
+  // Only the profile owner can see their own completion — it indirectly
+  // reveals how much private enrichment data exists, same reasoning as
+  // why the fields themselves stay private (see profile_details RLS).
+  const myDetails = useQuery({
+    queryKey: ["my-profile-details"],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profile_details")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOwnProfile,
+  });
+
+  const completion = isOwnProfile ? computeProfileCompletion(myDetails.data ?? null) : null;
+
   return (
     <PhoneShell {...(isOwnProfile ? { active: "profile" as const } : {})}>
-      <header className="flex items-center gap-3 p-6 pb-4">
-        <button
-          type="button"
-          onClick={() => router.history.back()}
-          aria-label="Back"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200"
-        >
-          <ArrowLeft className="size-4" />
-        </button>
-        <h1 className="text-balance font-serif text-2xl font-medium leading-tight text-forest">
-          {stats.isLoading ? "Profile" : (stats.data?.full_name ?? "Unknown student")}
-        </h1>
+      <header className="p-6 pb-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.history.back()}
+            aria-label="Back"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200"
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+          <h1 className="mr-16 min-w-0 flex-1 truncate text-balance font-serif text-2xl font-medium leading-tight text-forest">
+            {stats.isLoading ? "Profile" : (stats.data?.full_name ?? "Unknown student")}
+          </h1>
+        </div>
+        {isOwnProfile ? (
+          <div className="mt-3 pl-11">
+            <Link
+              to="/profile/edit"
+              className="inline-block shrink-0 rounded-full bg-forest px-3 py-1.5 text-[11px] font-medium text-sand"
+            >
+              Edit Profile
+            </Link>
+          </div>
+        ) : null}
       </header>
+
+      {completion ? (
+        <div className="px-6 pb-4">
+          <div className="flex items-center justify-between text-[11px] text-zinc-500">
+            <span>Profile {completion.percent}% complete</span>
+            <span>
+              {completion.answered}/{completion.total}
+            </span>
+          </div>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+            <div
+              className="h-full rounded-full bg-forest transition-all"
+              style={{ width: `${completion.percent}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex-1 space-y-6 overflow-y-auto px-6 pb-6">
         {stats.isLoading ? (
@@ -104,6 +154,12 @@ function ProfileScreen() {
               />
               <TierBadge tier={driverTier(stats.data.average_stars, stats.data.rides_given)} />
             </div>
+            {stats.data.open_to_networking_chat ? (
+              <div className="inline-flex items-center gap-1.5 rounded-md bg-forest/10 px-2 py-1 text-[10px] font-medium text-forest">
+                <MessageCircle className="size-3" />
+                Open to a networking chat
+              </div>
+            ) : null}
             <p className="text-xs text-zinc-500">
               {stats.data.completed_trip_count}{" "}
               {stats.data.completed_trip_count === 1 ? "completed trip" : "completed trips"}

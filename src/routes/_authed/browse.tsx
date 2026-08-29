@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { MessageCircle } from "lucide-react";
 import { useEffect } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
@@ -178,6 +179,12 @@ function BrowseScreen() {
                       emptyLabel="New driver"
                       className="text-[10px] text-zinc-500"
                     />
+                    {request.requester_open_to_networking_chat ? (
+                      <span className="inline-flex w-fit items-center gap-1 rounded-md bg-forest/10 px-1.5 py-0.5 text-[9px] font-medium text-forest">
+                        <MessageCircle className="size-2.5" />
+                        Open to networking
+                      </span>
+                    ) : null}
                   </span>
                 </Link>
                 <span

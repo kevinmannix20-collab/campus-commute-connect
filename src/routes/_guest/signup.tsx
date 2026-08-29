@@ -9,6 +9,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DEGREE_PURSUIT_OPTIONS,
+  GRADUATION_YEARS,
   SCHOOL_OPTIONS,
   SIGNUP_MISSION_MESSAGE,
 } from "@/lib/signup-constants";
@@ -25,12 +26,6 @@ export const Route = createFileRoute("/_guest/signup")({
 // is just for UX, the trigger is what actually stops non-UCLA signups.
 // Matches any UCLA subdomain: ucla.edu, g.ucla.edu, anderson.ucla.edu, etc.
 const UCLA_EMAIL_PATTERN = /^[^\s@]+@([a-zA-Z0-9-]+\.)*ucla\.edu$/i;
-
-const CURRENT_YEAR = new Date().getFullYear();
-const GRADUATION_YEARS = Array.from(
-  { length: CURRENT_YEAR - 1950 + 1 },
-  (_, i) => CURRENT_YEAR - i,
-);
 
 const signupSchema = z
   .object({

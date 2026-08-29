@@ -152,6 +152,60 @@ export type Database = {
           },
         ];
       };
+      profile_details: {
+        Row: {
+          conversation_style: string | null;
+          dream_role_or_company: string | null;
+          fragrance_free_preferred: boolean | null;
+          fun_fact: string | null;
+          hobbies: string[];
+          hometown: string | null;
+          languages_spoken: string | null;
+          music_preference: string[];
+          ok_with_food_drink: boolean | null;
+          open_to_networking_chat: boolean | null;
+          pet_preference: string | null;
+          target_field: string | null;
+          temperature_preference: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          conversation_style?: string | null;
+          dream_role_or_company?: string | null;
+          fragrance_free_preferred?: boolean | null;
+          fun_fact?: string | null;
+          hobbies?: string[];
+          hometown?: string | null;
+          languages_spoken?: string | null;
+          music_preference?: string[];
+          ok_with_food_drink?: boolean | null;
+          open_to_networking_chat?: boolean | null;
+          pet_preference?: string | null;
+          target_field?: string | null;
+          temperature_preference?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          conversation_style?: string | null;
+          dream_role_or_company?: string | null;
+          fragrance_free_preferred?: boolean | null;
+          fun_fact?: string | null;
+          hobbies?: string[];
+          hometown?: string | null;
+          languages_spoken?: string | null;
+          music_preference?: string[];
+          ok_with_food_drink?: boolean | null;
+          open_to_networking_chat?: boolean | null;
+          pet_preference?: string | null;
+          target_field?: string | null;
+          temperature_preference?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -379,6 +433,7 @@ export type Database = {
           requester_completed_trip_count: number;
           requester_display_name: string;
           requester_id: string;
+          requester_open_to_networking_chat: boolean;
           requester_rides_given: number;
           starting_point: string;
         }[];
@@ -401,6 +456,7 @@ export type Database = {
           full_name: string;
           graduation_year: number;
           member_since: string;
+          open_to_networking_chat: boolean;
           rides_given: number;
           school: string;
         }[];

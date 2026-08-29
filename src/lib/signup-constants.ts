@@ -24,6 +24,14 @@ export const DEGREE_PURSUIT_OPTIONS = [
   "Alumni",
 ] as const;
 
+// Shared between signup and the profile-edit flow — one list, most recent
+// year first, so both places offer the same range in the same order.
+const CURRENT_YEAR = new Date().getFullYear();
+export const GRADUATION_YEARS = Array.from(
+  { length: CURRENT_YEAR - 1950 + 1 },
+  (_, i) => CURRENT_YEAR - i,
+);
+
 // Copy shown near the school field at signup — kept as a single named
 // constant since the exact wording is expected to change independently
 // of the form logic around it.
