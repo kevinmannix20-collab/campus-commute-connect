@@ -1,14 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import campusMap from "@/assets/campus-map.jpg";
 import { CommuteMap } from "@/components/CommuteMap";
 import { PhoneShell } from "@/components/PhoneShell";
 import { PlaceAutocompleteInput, type ResolvedPlace } from "@/components/PlaceAutocompleteInput";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { useGoogleMapsLoaded } from "@/lib/use-google-maps";
+import { useTravelDurations } from "@/lib/use-travel-durations";
 import { combineDateAndTime, todayLocalDateString } from "@/lib/trip-time";
 
 export const Route = createFileRoute("/_authed/")({
@@ -128,12 +128,27 @@ function RequestScreen() {
     );
   };
 
-  const pickupCoords =
-    pickup.lat !== null && pickup.lng !== null ? { lat: pickup.lat, lng: pickup.lng } : null;
-  const destinationCoords =
-    destination.lat !== null && destination.lng !== null
-      ? { lat: destination.lat, lng: destination.lng }
-      : null;
+  // Memoized so CommuteMap/useTravelDurations only see a new object when
+  // the coordinates actually change — otherwise every unrelated re-render
+  // (e.g. the travel-time fetch resolving) hands them a fresh object with
+  // identical values, and effects keyed on these by reference re-run for
+  // no reason, fighting the map's own height-transition timing.
+  const pickupCoords = useMemo(
+    () =>
+      pickup.lat !== null && pickup.lng !== null ? { lat: pickup.lat, lng: pickup.lng } : null,
+    [pickup.lat, pickup.lng],
+  );
+  const destinationCoords = useMemo(
+    () =>
+      destination.lat !== null && destination.lng !== null
+        ? { lat: destination.lat, lng: destination.lng }
+        : null,
+    [destination.lat, destination.lng],
+  );
+
+  const travelDurations = useTravelDurations(pickupCoords, destinationCoords);
+  const travelTime = mode === "car" ? travelDurations.car : travelDurations.bus;
+  const travelTimeLabel = travelTime ? `~${travelTime} by ${mode}` : null;
 
   return (
     <PhoneShell active="home">
@@ -232,9 +247,14 @@ function RequestScreen() {
           </div>
 
           <div className="space-y-1">
-            <span className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              Mode
-            </span>
+            <div className="ml-1 flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                Mode
+              </span>
+              {travelTimeLabel ? (
+                <span className="text-[11px] font-medium text-forest">{travelTimeLabel}</span>
+              ) : null}
+            </div>
             <div className="flex rounded-[12px] bg-zinc-100 p-1 ring-1 ring-zinc-200">
               <button
                 type="button"
@@ -262,23 +282,7 @@ function RequestScreen() {
           </div>
         </div>
 
-        {mapsLoaded && (pickupCoords || destinationCoords) ? (
-          <CommuteMap pickup={pickupCoords} destination={destinationCoords} />
-        ) : (
-          <div className="relative h-48 overflow-hidden rounded-[12px] bg-zinc-100 ring-1 ring-black/5">
-            <img
-              src={campusMap}
-              alt="Campus map at night with a highlighted route"
-              width={800}
-              height={512}
-              className="size-full object-cover opacity-40"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="animate-searching size-12 rounded-full bg-forest/10" />
-              <div className="size-3 rounded-full bg-forest" />
-            </div>
-          </div>
-        )}
+        <CommuteMap pickup={pickupCoords} destination={destinationCoords} />
       </div>
 
       <div className="border-t border-zinc-950/5 bg-sand p-6">

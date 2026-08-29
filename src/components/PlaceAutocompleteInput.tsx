@@ -30,6 +30,16 @@ export function PlaceAutocompleteInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const onPlaceSelectedRef = useRef(onPlaceSelected);
   onPlaceSelectedRef.current = onPlaceSelected;
+  const onTextChangeRef = useRef(onTextChange);
+  onTextChangeRef.current = onTextChange;
+  // Selecting a suggestion makes the widget overwrite the input's DOM value
+  // and fire a native input event as a side effect, sometimes more than
+  // once — without this, those synthetic changes run onTextChange and null
+  // out the lat/lng we just reported via onPlaceSelected. Comparing against
+  // the last resolved address (rather than a one-shot "suppress next"
+  // flag) catches the sync regardless of how many times it fires or
+  // whether it lands before or after place_changed.
+  const lastResolvedAddressRef = useRef<string | null>(null);
 
   useEffect(() => {
     const inputEl = inputRef.current;
@@ -43,11 +53,9 @@ export function PlaceAutocompleteInput({
       const place = autocomplete.getPlace();
       const location = place.geometry?.location;
       if (!location) return;
-      onPlaceSelectedRef.current({
-        address: place.formatted_address ?? inputEl.value,
-        lat: location.lat(),
-        lng: location.lng(),
-      });
+      const address = place.formatted_address ?? inputEl.value;
+      lastResolvedAddressRef.current = address;
+      onPlaceSelectedRef.current({ address, lat: location.lat(), lng: location.lng() });
     });
 
     return () => {
@@ -61,7 +69,13 @@ export function PlaceAutocompleteInput({
       id={id}
       ref={inputRef}
       value={value}
-      onChange={(e) => onTextChange(e.target.value)}
+      onChange={(e) => {
+        if (e.target.value === lastResolvedAddressRef.current) {
+          return;
+        }
+        lastResolvedAddressRef.current = null;
+        onTextChangeRef.current(e.target.value);
+      }}
       placeholder={placeholder}
       autoComplete="off"
       className={className}
