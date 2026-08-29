@@ -16,11 +16,11 @@ export function priorityScore(averageRating: number | null, ridesGiven: number):
 
 export type DriverTier = "gold" | "silver" | "bronze" | null;
 
-const GOLD_MIN_RIDES = 15;
+export const GOLD_MIN_RIDES = 15;
 const GOLD_MIN_RATING = 4.5;
-const SILVER_MIN_RIDES = 5;
+export const SILVER_MIN_RIDES = 5;
 const SILVER_MIN_RATING = 4.0;
-const BRONZE_MIN_RIDES = 1;
+export const BRONZE_MIN_RIDES = 1;
 
 export function driverTier(averageRating: number | null, ridesGiven: number): DriverTier {
   const rating = averageRating ?? 0;

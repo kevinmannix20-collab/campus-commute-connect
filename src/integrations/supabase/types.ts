@@ -152,6 +152,64 @@ export type Database = {
           },
         ];
       };
+      notifications: {
+        Row: {
+          actor_id: string | null;
+          bus_trip_request_id: string | null;
+          created_at: string;
+          id: string;
+          match_id: string | null;
+          message_id: string | null;
+          read_at: string | null;
+          type: string;
+          user_id: string;
+        };
+        Insert: {
+          actor_id?: string | null;
+          bus_trip_request_id?: string | null;
+          created_at?: string;
+          id?: string;
+          match_id?: string | null;
+          message_id?: string | null;
+          read_at?: string | null;
+          type: string;
+          user_id: string;
+        };
+        Update: {
+          actor_id?: string | null;
+          bus_trip_request_id?: string | null;
+          created_at?: string;
+          id?: string;
+          match_id?: string | null;
+          message_id?: string | null;
+          read_at?: string | null;
+          type?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_bus_trip_request_id_fkey";
+            columns: ["bus_trip_request_id"];
+            isOneToOne: false;
+            referencedRelation: "trip_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_message_id_fkey";
+            columns: ["message_id"];
+            isOneToOne: false;
+            referencedRelation: "messages";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profile_details: {
         Row: {
           conversation_style: string | null;
@@ -212,6 +270,9 @@ export type Database = {
           degree_pursuit: string | null;
           full_name: string;
           graduation_year: number | null;
+          home_address: string | null;
+          home_lat: number | null;
+          home_lng: number | null;
           id: string;
           school: string | null;
           school_email: string;
@@ -221,6 +282,9 @@ export type Database = {
           degree_pursuit?: string | null;
           full_name: string;
           graduation_year?: number | null;
+          home_address?: string | null;
+          home_lat?: number | null;
+          home_lng?: number | null;
           id: string;
           school?: string | null;
           school_email: string;
@@ -230,6 +294,9 @@ export type Database = {
           degree_pursuit?: string | null;
           full_name?: string;
           graduation_year?: number | null;
+          home_address?: string | null;
+          home_lat?: number | null;
+          home_lng?: number | null;
           id?: string;
           school?: string | null;
           school_email?: string;
@@ -270,6 +337,38 @@ export type Database = {
             columns: ["trip_id"];
             isOneToOne: false;
             referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      trip_request_companions: {
+        Row: {
+          added_by: string;
+          created_at: string;
+          id: string;
+          trip_request_id: string;
+          user_id: string;
+        };
+        Insert: {
+          added_by: string;
+          created_at?: string;
+          id?: string;
+          trip_request_id: string;
+          user_id: string;
+        };
+        Update: {
+          added_by?: string;
+          created_at?: string;
+          id?: string;
+          trip_request_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "trip_request_companions_trip_request_id_fkey";
+            columns: ["trip_request_id"];
+            isOneToOne: false;
+            referencedRelation: "trip_requests";
             referencedColumns: ["id"];
           },
         ];
@@ -347,6 +446,11 @@ export type Database = {
         Args: { p_trip_request_id: string };
         Returns: undefined;
       };
+      mark_all_notifications_read: { Args: never; Returns: undefined };
+      mark_thread_notifications_read: {
+        Args: { p_thread_id: string; p_thread_type: string };
+        Returns: undefined;
+      };
       mark_trip_completed: {
         Args: { p_trip_id: string };
         Returns: {
@@ -396,6 +500,30 @@ export type Database = {
           my_trip_request_id: string;
         }[];
       };
+      my_message_threads: {
+        Args: never;
+        Returns: {
+          last_message_at: string;
+          last_message_body: string;
+          thread_id: string;
+          thread_type: string;
+          title: string;
+          unread_count: number;
+        }[];
+      };
+      my_notifications: {
+        Args: never;
+        Returns: {
+          actor_display_name: string;
+          bus_trip_request_id: string;
+          created_at: string;
+          id: string;
+          match_id: string;
+          preview: string;
+          read_at: string;
+          type: string;
+        }[];
+      };
       my_rating_activity: {
         Args: never;
         Returns: {
@@ -424,17 +552,22 @@ export type Database = {
         Args: never;
         Returns: {
           bus_member_count: number;
+          companion_display_names: string[];
           created_at: string;
           destination: string;
+          destination_lat: number;
+          destination_lng: number;
           id: string;
           mode: string;
           requested_time: string;
           requester_average_stars: number;
           requester_completed_trip_count: number;
+          requester_degree_pursuit: string;
           requester_display_name: string;
           requester_id: string;
           requester_open_to_networking_chat: boolean;
           requester_rides_given: number;
+          requester_school: string;
           starting_point: string;
         }[];
       };
@@ -459,6 +592,13 @@ export type Database = {
           open_to_networking_chat: boolean;
           rides_given: number;
           school: string;
+        }[];
+      };
+      search_profiles: {
+        Args: { p_query: string };
+        Returns: {
+          display_name: string;
+          id: string;
         }[];
       };
       submit_rating: {

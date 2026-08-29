@@ -1,14 +1,31 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Award,
+  Car,
+  GraduationCap,
+  Home,
+  Leaf,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
+import { PlaceAutocompleteInput } from "@/components/PlaceAutocompleteInput";
 import { StarDisplay } from "@/components/StarRating";
 import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { carbonSavedLbs, milesNotDrivenEquivalent } from "@/lib/carbonSavings";
 import { computeProfileCompletion } from "@/lib/profile-completion";
-import { driverTier } from "@/lib/priorityScore";
+import {
+  driverTier,
+  GOLD_MIN_RIDES,
+  SILVER_MIN_RIDES,
+  BRONZE_MIN_RIDES,
+} from "@/lib/priorityScore";
 
 export const Route = createFileRoute("/_authed/profile/$userId")({
   head: () => ({
@@ -21,14 +38,11 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 
-function formatMemberSince(iso: string) {
-  return new Date(iso).toLocaleDateString([], { month: "long", year: "numeric" });
-}
-
 function ProfileScreen() {
   const { userId } = Route.useParams();
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const isOwnProfile = user?.id === userId;
 
   const stats = useQuery({
@@ -37,6 +51,58 @@ function ProfileScreen() {
       const { data, error } = await supabase.rpc("profile_stats", { p_user_id: userId });
       if (error) throw error;
       return data?.[0] ?? null;
+    },
+  });
+
+  // Kept out of profile_stats() — a home address isn't public, so it's read
+  // via a direct table select, which profiles_select_own already restricts
+  // to the caller's own row (this query only runs for isOwnProfile anyway).
+  const homeAddressQuery = useQuery({
+    queryKey: ["my-home-address"],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("home_address, home_lat, home_lng")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOwnProfile,
+  });
+
+  const [homeAddress, setHomeAddress] = useState("");
+  // Selecting a suggestion already saves (with resolved lat/lng) and then
+  // blurs the field as a side effect — without this flag, that blur would
+  // immediately re-save the same address with lat/lng nulled out.
+  const homeAddressDirtyRef = useRef(false);
+  // Hydrate local state from the server exactly once. Without this guard,
+  // a slow first fetch resolving after the user has already started typing
+  // would stomp their in-progress edit back to the fetched (stale) value.
+  const homeAddressInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOwnProfile || !homeAddressQuery.data || homeAddressInitializedRef.current) return;
+    homeAddressInitializedRef.current = true;
+    setHomeAddress(homeAddressQuery.data.home_address ?? "");
+  }, [isOwnProfile, homeAddressQuery.data]);
+
+  const saveHomeAddress = useMutation({
+    mutationFn: async (next: { address: string; lat: number | null; lng: number | null }) => {
+      if (!user) return;
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          home_address: next.address || null,
+          home_lat: next.lat,
+          home_lng: next.lng,
+        })
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-home-address"] });
     },
   });
 
@@ -74,6 +140,17 @@ function ProfileScreen() {
 
   const given = (ratingActivity.data ?? []).filter((r) => r.direction === "given");
 
+  const notifications = useQuery({
+    queryKey: ["my-notifications"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("my_notifications");
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOwnProfile,
+  });
+  const unreadCount = (notifications.data ?? []).filter((n) => !n.read_at).length;
+
   // Only the profile owner can see their own completion — it indirectly
   // reveals how much private enrichment data exists, same reasoning as
   // why the fields themselves stay private (see profile_details RLS).
@@ -93,6 +170,35 @@ function ProfileScreen() {
   });
 
   const completion = isOwnProfile ? computeProfileCompletion(myDetails.data ?? null) : null;
+
+  const tier = stats.data ? driverTier(stats.data.average_stars, stats.data.rides_given) : null;
+  const ridesGiven = stats.data?.rides_given ?? 0;
+  const nextTierThreshold =
+    tier === "gold"
+      ? null
+      : tier === "silver"
+        ? GOLD_MIN_RIDES
+        : tier === "bronze"
+          ? SILVER_MIN_RIDES
+          : BRONZE_MIN_RIDES;
+  const prevTierThreshold =
+    tier === "gold"
+      ? GOLD_MIN_RIDES
+      : tier === "silver"
+        ? SILVER_MIN_RIDES
+        : tier === "bronze"
+          ? BRONZE_MIN_RIDES
+          : 0;
+  const tierProgressPct = nextTierThreshold
+    ? Math.min(
+        100,
+        Math.round(
+          ((ridesGiven - prevTierThreshold) / (nextTierThreshold - prevTierThreshold)) * 100,
+        ),
+      )
+    : 100;
+
+  const lbsSaved = stats.data ? carbonSavedLbs(stats.data.completed_trip_count) : 0;
 
   return (
     <PhoneShell {...(isOwnProfile ? { active: "profile" as const } : {})}>
@@ -145,40 +251,142 @@ function ProfileScreen() {
         ) : !stats.data ? (
           <p className="p-4 text-center text-xs text-zinc-400">Profile not found.</p>
         ) : (
-          <div className="space-y-3 rounded-[20px] bg-zinc-50 p-5 ring-1 ring-zinc-950/5">
-            <div className="flex items-center gap-2">
-              <StarDisplay
-                average={stats.data.average_stars}
-                emptyLabel="No ratings yet"
-                className="inline-flex items-center gap-1.5 text-base font-semibold text-zinc-900"
-              />
-              <TierBadge tier={driverTier(stats.data.average_stars, stats.data.rides_given)} />
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-[20px] bg-gradient-to-br from-forest to-forest/80 p-5 text-sand shadow-lg shadow-forest/20">
+              <div className="flex items-center justify-between">
+                <StarDisplay
+                  average={stats.data.average_stars}
+                  emptyLabel="No ratings yet"
+                  className="inline-flex items-center gap-1.5 text-base font-semibold"
+                />
+                <TierBadge tier={tier} />
+              </div>
+
+              {stats.data.open_to_networking_chat ? (
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-sand/15 px-2 py-1 text-[10px] font-medium">
+                  <MessageCircle className="size-3" />
+                  Open to a networking chat
+                </div>
+              ) : null}
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-[14px] bg-sand/10 p-3">
+                  <div className="flex items-center gap-1.5 text-sand/70">
+                    <Car className="size-3.5" />
+                    <span className="text-[10px] font-medium uppercase tracking-wide">Trips</span>
+                  </div>
+                  <p className="mt-1 text-xl font-bold">{stats.data.completed_trip_count}</p>
+                </div>
+                <div className="rounded-[14px] bg-sand/10 p-3">
+                  <div className="flex items-center gap-1.5 text-sand/70">
+                    <Sparkles className="size-3.5" />
+                    <span className="text-[10px] font-medium uppercase tracking-wide">
+                      Rides Given
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xl font-bold">{ridesGiven}</p>
+                </div>
+              </div>
+
+              {nextTierThreshold ? (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between text-[10px] text-sand/70">
+                    <span className="flex items-center gap-1">
+                      <Award className="size-3" />
+                      Next tier
+                    </span>
+                    <span>
+                      {ridesGiven}/{nextTierThreshold} rides
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-sand/20">
+                    <div
+                      className="h-full rounded-full bg-amber-300 transition-all"
+                      style={{ width: `${tierProgressPct}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
-            {stats.data.open_to_networking_chat ? (
-              <div className="inline-flex items-center gap-1.5 rounded-md bg-forest/10 px-2 py-1 text-[10px] font-medium text-forest">
-                <MessageCircle className="size-3" />
-                Open to a networking chat
+
+            {stats.data.school ? (
+              <div className="flex items-center gap-2 rounded-[16px] bg-zinc-50 p-3.5 ring-1 ring-zinc-950/5">
+                <GraduationCap className="size-4 shrink-0 text-zinc-400" />
+                <p className="text-xs font-medium text-zinc-700">
+                  {stats.data.school}
+                  {stats.data.degree_pursuit ? ` · ${stats.data.degree_pursuit}` : ""}
+                  {stats.data.degree_pursuit === "Alumni" && stats.data.graduation_year
+                    ? ` '${String(stats.data.graduation_year).slice(-2)}`
+                    : ""}
+                </p>
               </div>
             ) : null}
-            <p className="text-xs text-zinc-500">
-              {stats.data.completed_trip_count}{" "}
-              {stats.data.completed_trip_count === 1 ? "completed trip" : "completed trips"}
-              {" · "}
-              {stats.data.rides_given} {stats.data.rides_given === 1 ? "ride given" : "rides given"}
-            </p>
-            {stats.data.school ? (
-              <p className="text-xs text-zinc-600">
-                {stats.data.school}
-                {stats.data.degree_pursuit ? ` · ${stats.data.degree_pursuit}` : ""}
-                {stats.data.degree_pursuit === "Alumni" && stats.data.graduation_year
-                  ? ` '${String(stats.data.graduation_year).slice(-2)}`
-                  : ""}
-              </p>
+
+            {isOwnProfile ? (
+              <div className="rounded-[20px] bg-zinc-50 p-4 ring-1 ring-zinc-950/5">
+                <div className="mb-3 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                  <Home className="size-3.5" />
+                  Home Address
+                </div>
+                <PlaceAutocompleteInput
+                  value={homeAddress}
+                  onTextChange={(text) => {
+                    homeAddressDirtyRef.current = true;
+                    setHomeAddress(text);
+                  }}
+                  onPlaceSelected={(place) => {
+                    homeAddressDirtyRef.current = false;
+                    setHomeAddress(place.address);
+                    saveHomeAddress.mutate({
+                      address: place.address,
+                      lat: place.lat,
+                      lng: place.lng,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (!homeAddressDirtyRef.current) return;
+                    homeAddressDirtyRef.current = false;
+                    saveHomeAddress.mutate({ address: homeAddress, lat: null, lng: null });
+                  }}
+                  placeholder="Where do you live?"
+                  className="w-full rounded-[10px] bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
+                />
+                <p className="mt-1.5 text-[10px] text-zinc-400">
+                  Used to show how far each posting is from home in the browse feed.
+                </p>
+              </div>
             ) : null}
-            {stats.data.member_since ? (
-              <p className="text-[11px] text-zinc-400">
-                Member since {formatMemberSince(stats.data.member_since)}
-              </p>
+
+            <div className="flex items-center gap-3 rounded-[20px] bg-emerald-50 p-4 ring-1 ring-emerald-900/10">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+                <Leaf className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-emerald-900">
+                  {lbsSaved.toLocaleString()} lbs CO₂ saved
+                </p>
+                <p className="text-[11px] text-emerald-700">
+                  ≈ {milesNotDrivenEquivalent(lbsSaved).toLocaleString()} miles of solo driving
+                  avoided by sharing rides
+                </p>
+              </div>
+            </div>
+
+            {isOwnProfile ? (
+              <Link
+                to="/messages"
+                className="flex items-center gap-3 rounded-[16px] bg-zinc-50 p-3.5 ring-1 ring-zinc-950/5 transition-colors hover:bg-zinc-100"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-forest/10 text-forest">
+                  <MessageCircle className="size-4" />
+                </div>
+                <span className="flex-1 text-sm font-medium text-zinc-900">Messages</span>
+                {unreadCount > 0 ? (
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-forest text-[10px] font-bold text-sand">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : null}
+              </Link>
             ) : null}
           </div>
         )}

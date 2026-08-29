@@ -57,6 +57,18 @@ function MessagesScreen() {
   });
 
   useEffect(() => {
+    supabase
+      .rpc("mark_thread_notifications_read", {
+        p_thread_type: threadType,
+        p_thread_id: threadId,
+      })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadType, threadId]);
+
+  useEffect(() => {
     const channel = supabase
       .channel(`messages-${threadType}-${threadId}`)
       .on(

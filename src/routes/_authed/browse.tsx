@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Navigation } from "lucide-react";
 import { useEffect } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
@@ -8,7 +8,8 @@ import { StarDisplay } from "@/components/StarRating";
 import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { driverTier, priorityScore } from "@/lib/priorityScore";
+import { driverTier } from "@/lib/priorityScore";
+import { useHomeDistances } from "@/lib/use-home-distances";
 
 export const Route = createFileRoute("/_authed/browse")({
   head: () => ({
@@ -33,8 +34,15 @@ export const Route = createFileRoute("/_authed/browse")({
 const openRequestsQueryKey = ["open-trip-requests"];
 const myOpenRequestQueryKey = ["my-open-trip-request"];
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function formatDateTime(iso: string) {
+  const date = new Date(iso);
+  const datePart = date.toLocaleDateString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const timePart = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `${datePart} · ${timePart}`;
 }
 
 function BrowseScreen() {
@@ -49,6 +57,38 @@ function BrowseScreen() {
       return data;
     },
   });
+
+  // Own school + home address, so posting cards can flag classmates and show
+  // distance from home at a glance — plain table select (not an RPC) since
+  // profiles_select_own lets a user read only their own row directly.
+  const myProfile = useQuery({
+    queryKey: ["my-school-info"],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("school, home_lat, home_lng")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const homeCoords =
+    myProfile.data?.home_lat != null && myProfile.data?.home_lng != null
+      ? { lat: myProfile.data.home_lat, lng: myProfile.data.home_lng }
+      : null;
+
+  const homeDistances = useHomeDistances(
+    homeCoords,
+    (openRequests.data ?? []).map((r) => ({
+      id: r.id,
+      lat: r.destination_lat,
+      lng: r.destination_lng,
+    })),
+  );
 
   // My own open request, if any — needed to call create_match, since a
   // match always pairs the caller's own open request with someone else's.
@@ -87,19 +127,9 @@ function BrowseScreen() {
     };
   }, [queryClient]);
 
-  // Sorted by priority score (rating quality + driving volume, see
-  // priorityScore.ts) descending — this is also how a frequent driver's
-  // own ride request gets surfaced ahead of a first-timer's ("reciprocal
-  // karma"): their score is computed from their history as a driver even
-  // though they're requesting as a rider right now. A brand-new user with
-  // no ratings and no rides given naturally scores 0 and sinks to the
-  // bottom without needing a special case. Stable sort preserves the
-  // RPC's created_at-desc order within ties.
-  const sortedRequests = [...(openRequests.data ?? [])].sort(
-    (a, b) =>
-      priorityScore(b.requester_average_stars, b.requester_rides_given) -
-      priorityScore(a.requester_average_stars, a.requester_rides_given),
-  );
+  // open_trip_requests() already orders by requested_time ascending and
+  // excludes past ones — soonest trip first, nothing stale left to filter.
+  const sortedRequests = openRequests.data ?? [];
 
   const matchWith = async (theirRequestId: string) => {
     if (!myOpenRequest.data) return;
@@ -174,6 +204,22 @@ function BrowseScreen() {
                         )}
                       />
                     </span>
+                    {request.requester_school || request.requester_degree_pursuit ? (
+                      <span
+                        className={
+                          myProfile.data?.school &&
+                          request.requester_school &&
+                          myProfile.data.school.toLowerCase() ===
+                            request.requester_school.toLowerCase()
+                            ? "inline-flex w-fit items-center rounded-md bg-forest/10 px-1.5 py-0.5 text-[9px] font-semibold text-forest"
+                            : "inline-flex w-fit items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[9px] font-medium text-zinc-500"
+                        }
+                      >
+                        {[request.requester_school, request.requester_degree_pursuit]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    ) : null}
                     <StarDisplay
                       average={request.requester_average_stars}
                       emptyLabel="New driver"
@@ -199,17 +245,29 @@ function BrowseScreen() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
-                  <span className="size-1.5 rounded-full bg-zinc-300" />
-                  To: {request.destination}
+                  <span className="size-1.5 rounded-full border border-forest" />
+                  From: {request.starting_point}
+                </div>
+                <div className="flex items-center justify-between gap-2 text-xs text-zinc-500">
+                  <span className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-forest" />
+                    To: {request.destination}
+                  </span>
+                  {homeDistances[request.id] ? (
+                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                      <Navigation className="size-2.5" />
+                      {homeDistances[request.id]} from home
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <span className="size-1.5 rounded-full bg-zinc-300" />
-                  Time: {formatTime(request.requested_time)}
+                  {formatDateTime(request.requested_time)}
                 </div>
-                {request.mode === "bus" ? (
+                {request.mode === "car" && request.companion_display_names?.length > 0 ? (
                   <div className="flex items-center gap-2 text-xs text-zinc-500">
                     <span className="size-1.5 rounded-full bg-zinc-300" />
-                    {request.bus_member_count ?? 1}/6 joined
+                    With: {request.companion_display_names.join(", ")}
                   </div>
                 ) : null}
               </div>
