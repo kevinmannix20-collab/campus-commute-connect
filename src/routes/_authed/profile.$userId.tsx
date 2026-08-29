@@ -110,6 +110,15 @@ function ProfileScreen() {
               {" · "}
               {stats.data.rides_given} {stats.data.rides_given === 1 ? "ride given" : "rides given"}
             </p>
+            {stats.data.school ? (
+              <p className="text-xs text-zinc-600">
+                {stats.data.school}
+                {stats.data.degree_pursuit ? ` · ${stats.data.degree_pursuit}` : ""}
+                {stats.data.degree_pursuit === "Alumni" && stats.data.graduation_year
+                  ? ` '${String(stats.data.graduation_year).slice(-2)}`
+                  : ""}
+              </p>
+            ) : null}
             {stats.data.member_since ? (
               <p className="text-[11px] text-zinc-400">
                 Member since {formatMemberSince(stats.data.member_since)}

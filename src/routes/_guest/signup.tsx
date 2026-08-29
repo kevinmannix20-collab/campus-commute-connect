@@ -1,11 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AuthShell } from "@/components/AuthShell";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DEGREE_PURSUIT_OPTIONS,
+  SCHOOL_OPTIONS,
+  SIGNUP_MISSION_MESSAGE,
+} from "@/lib/signup-constants";
 
 export const Route = createFileRoute("/_guest/signup")({
   head: () => ({
@@ -14,20 +20,40 @@ export const Route = createFileRoute("/_guest/signup")({
   component: SignupScreen,
 });
 
-// Mirrors the check enforced in the database (see the initial_schema
-// migration's enforce_edu_email trigger) — this copy is just for UX,
-// the trigger is what actually stops non-.edu signups.
-const EDU_EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.edu$/i;
+// Mirrors the check enforced in the database (see the enforce_edu_email
+// trigger, updated in the ucla_wide_signup_fields migration) — this copy
+// is just for UX, the trigger is what actually stops non-UCLA signups.
+// Matches any UCLA subdomain: ucla.edu, g.ucla.edu, anderson.ucla.edu, etc.
+const UCLA_EMAIL_PATTERN = /^[^\s@]+@([a-zA-Z0-9-]+\.)*ucla\.edu$/i;
 
-const signupSchema = z.object({
-  fullName: z.string().trim().min(1, "Full name is required"),
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Enter a valid email address")
-    .regex(EDU_EMAIL_PATTERN, "Signup is restricted to .edu school email addresses"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
+const CURRENT_YEAR = new Date().getFullYear();
+const GRADUATION_YEARS = Array.from(
+  { length: CURRENT_YEAR - 1950 + 1 },
+  (_, i) => CURRENT_YEAR - i,
+);
+
+const signupSchema = z
+  .object({
+    fullName: z.string().trim().min(1, "Full name is required"),
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Enter a valid email address")
+      .regex(UCLA_EMAIL_PATTERN, "Signup is restricted to UCLA email addresses"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    school: z.string().min(1, "Select your school"),
+    degreePursuit: z.string().min(1, "Select what you're pursuing"),
+    graduationYear: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.degreePursuit === "Alumni" && !values.graduationYear) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Graduation year is required for alumni",
+        path: ["graduationYear"],
+      });
+    }
+  });
 
 type SignupValues = z.infer<typeof signupSchema>;
 
@@ -38,15 +64,29 @@ function SignupScreen() {
   const {
     register,
     handleSubmit,
+    control,
+    watch,
     formState: { errors, isSubmitting },
-  } = useForm<SignupValues>({ resolver: zodResolver(signupSchema) });
+  } = useForm<SignupValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { school: "", degreePursuit: "", graduationYear: "" },
+  });
+
+  const degreePursuit = watch("degreePursuit");
 
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: { data: { full_name: values.fullName } },
+      options: {
+        data: {
+          full_name: values.fullName,
+          school: values.school,
+          degree_pursuit: values.degreePursuit,
+          graduation_year: values.degreePursuit === "Alumni" ? values.graduationYear : "",
+        },
+      },
     });
 
     if (error) {
@@ -87,7 +127,7 @@ function SignupScreen() {
   return (
     <AuthShell
       title="Create your account"
-      subtitle="Sign up with your .edu email to start finding commutes."
+      subtitle="Sign up with your UCLA email to start finding commutes."
       footer={
         <>
           Already have an account?{" "}
@@ -123,13 +163,13 @@ function SignupScreen() {
             htmlFor="email"
             className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
           >
-            School Email
+            UCLA Email
           </label>
           <input
             id="email"
             type="email"
             autoComplete="email"
-            placeholder="you@school.edu"
+            placeholder="you@ucla.edu"
             className="w-full rounded-[12px] bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200 placeholder:text-zinc-400"
             {...register("email")}
           />
@@ -157,6 +197,92 @@ function SignupScreen() {
             <p className="mt-1 ml-1 text-xs text-red-600">{errors.password.message}</p>
           ) : null}
         </div>
+
+        <div className="rounded-[14px] bg-forest/5 p-4 ring-1 ring-forest/10">
+          <p className="text-balance font-serif text-sm font-medium text-forest">
+            {SIGNUP_MISSION_MESSAGE.headline}
+          </p>
+          <p className="mt-1 text-pretty text-xs text-zinc-500">{SIGNUP_MISSION_MESSAGE.subline}</p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="school"
+            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+          >
+            School / Department
+          </label>
+          <Controller
+            name="school"
+            control={control}
+            render={({ field }) => (
+              <SearchableSelect
+                id="school"
+                value={field.value || null}
+                onChange={field.onChange}
+                options={SCHOOL_OPTIONS}
+                placeholder="Select your school…"
+              />
+            )}
+          />
+          {errors.school ? (
+            <p className="mt-1 ml-1 text-xs text-red-600">{errors.school.message}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <label
+            htmlFor="degreePursuit"
+            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+          >
+            Currently Pursuing
+          </label>
+          <Controller
+            name="degreePursuit"
+            control={control}
+            render={({ field }) => (
+              <SearchableSelect
+                id="degreePursuit"
+                value={field.value || null}
+                onChange={field.onChange}
+                options={DEGREE_PURSUIT_OPTIONS}
+                placeholder="Select one…"
+              />
+            )}
+          />
+          {errors.degreePursuit ? (
+            <p className="mt-1 ml-1 text-xs text-red-600">{errors.degreePursuit.message}</p>
+          ) : null}
+        </div>
+
+        {degreePursuit === "Alumni" ? (
+          <div>
+            <label
+              htmlFor="graduationYear"
+              className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            >
+              Graduation Year
+            </label>
+            <select
+              id="graduationYear"
+              defaultValue=""
+              className="w-full rounded-[12px] bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200"
+              {...register("graduationYear")}
+            >
+              <option value="" disabled>
+                Select a year…
+              </option>
+              {GRADUATION_YEARS.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            {errors.graduationYear ? (
+              <p className="mt-1 ml-1 text-xs text-red-600">{errors.graduationYear.message}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         {formError ? <p className="text-xs text-red-600">{formError}</p> : null}
 

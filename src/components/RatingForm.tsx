@@ -12,8 +12,8 @@ export function RatingForm({ tripId, onDone }: { tripId: string; onDone: () => v
     mutationFn: async () => {
       const { error } = await supabase.rpc("submit_rating", {
         p_trip_id: tripId,
-        p_stars: stars || null,
-        p_comment: comment.trim() || null,
+        ...(stars ? { p_stars: stars } : {}),
+        ...(comment.trim() ? { p_comment: comment.trim() } : {}),
       });
       if (error) throw error;
     },

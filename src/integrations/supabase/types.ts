@@ -4,106 +4,94 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17";
+    PostgrestVersion: "14.5";
+  };
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
-      profiles: {
+      bus_group_members: {
         Row: {
           id: string;
-          full_name: string;
-          school_email: string;
-          created_at: string;
-        };
-        Insert: {
-          id: string;
-          full_name: string;
-          school_email: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          full_name?: string;
-          school_email?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      trip_requests: {
-        Row: {
-          id: string;
+          joined_at: string;
+          trip_request_id: string;
           user_id: string;
-          starting_point: string;
-          starting_point_lat: number | null;
-          starting_point_lng: number | null;
-          destination: string;
-          destination_lat: number | null;
-          destination_lng: number | null;
-          requested_time: string;
-          mode: string;
-          status: string;
-          created_at: string;
         };
         Insert: {
           id?: string;
+          joined_at?: string;
+          trip_request_id: string;
           user_id: string;
-          starting_point: string;
-          starting_point_lat?: number | null;
-          starting_point_lng?: number | null;
-          destination: string;
-          destination_lat?: number | null;
-          destination_lng?: number | null;
-          requested_time: string;
-          mode: string;
-          status?: string;
-          created_at?: string;
         };
         Update: {
           id?: string;
+          joined_at?: string;
+          trip_request_id?: string;
           user_id?: string;
-          starting_point?: string;
-          starting_point_lat?: number | null;
-          starting_point_lng?: number | null;
-          destination?: string;
-          destination_lat?: number | null;
-          destination_lng?: number | null;
-          requested_time?: string;
-          mode?: string;
-          status?: string;
-          created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "bus_group_members_trip_request_id_fkey";
+            columns: ["trip_request_id"];
+            isOneToOne: false;
+            referencedRelation: "trip_requests";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       matches: {
         Row: {
-          id: string;
-          trip_request_id_a: string;
-          trip_request_id_b: string;
-          status: string;
           completed_at: string | null;
           completed_by: string | null;
-          driver_user_id: string | null;
           created_at: string;
-        };
-        Insert: {
-          id?: string;
+          driver_user_id: string | null;
+          id: string;
+          status: string;
           trip_request_id_a: string;
           trip_request_id_b: string;
-          status?: string;
+        };
+        Insert: {
           completed_at?: string | null;
           completed_by?: string | null;
-          driver_user_id?: string | null;
           created_at?: string;
+          driver_user_id?: string | null;
+          id?: string;
+          status?: string;
+          trip_request_id_a: string;
+          trip_request_id_b: string;
         };
         Update: {
-          id?: string;
-          trip_request_id_a?: string;
-          trip_request_id_b?: string;
-          status?: string;
           completed_at?: string | null;
           completed_by?: string | null;
-          driver_user_id?: string | null;
           created_at?: string;
+          driver_user_id?: string | null;
+          id?: string;
+          status?: string;
+          trip_request_id_a?: string;
+          trip_request_id_b?: string;
         };
         Relationships: [
           {
@@ -122,33 +110,105 @@ export type Database = {
           },
         ];
       };
-      ratings: {
+      messages: {
         Row: {
-          id: string;
-          trip_id: string;
-          rater_id: string;
-          ratee_id: string;
-          stars: number | null;
-          comment: string | null;
+          body: string;
+          bus_trip_request_id: string | null;
           created_at: string;
+          id: string;
+          match_id: string | null;
+          sender_id: string;
         };
         Insert: {
-          id?: string;
-          trip_id: string;
-          rater_id: string;
-          ratee_id: string;
-          stars?: number | null;
-          comment?: string | null;
+          body: string;
+          bus_trip_request_id?: string | null;
           created_at?: string;
+          id?: string;
+          match_id?: string | null;
+          sender_id: string;
         };
         Update: {
+          body?: string;
+          bus_trip_request_id?: string | null;
+          created_at?: string;
           id?: string;
-          trip_id?: string;
-          rater_id?: string;
-          ratee_id?: string;
-          stars?: number | null;
+          match_id?: string | null;
+          sender_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "messages_bus_trip_request_id_fkey";
+            columns: ["bus_trip_request_id"];
+            isOneToOne: false;
+            referencedRelation: "trip_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "messages_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      profiles: {
+        Row: {
+          created_at: string;
+          degree_pursuit: string | null;
+          full_name: string;
+          graduation_year: number | null;
+          id: string;
+          school: string | null;
+          school_email: string;
+        };
+        Insert: {
+          created_at?: string;
+          degree_pursuit?: string | null;
+          full_name: string;
+          graduation_year?: number | null;
+          id: string;
+          school?: string | null;
+          school_email: string;
+        };
+        Update: {
+          created_at?: string;
+          degree_pursuit?: string | null;
+          full_name?: string;
+          graduation_year?: number | null;
+          id?: string;
+          school?: string | null;
+          school_email?: string;
+        };
+        Relationships: [];
+      };
+      ratings: {
+        Row: {
+          comment: string | null;
+          created_at: string;
+          id: string;
+          ratee_id: string;
+          rater_id: string;
+          stars: number | null;
+          trip_id: string;
+        };
+        Insert: {
           comment?: string | null;
           created_at?: string;
+          id?: string;
+          ratee_id: string;
+          rater_id: string;
+          stars?: number | null;
+          trip_id: string;
+        };
+        Update: {
+          comment?: string | null;
+          created_at?: string;
+          id?: string;
+          ratee_id?: string;
+          rater_id?: string;
+          stars?: number | null;
+          trip_id?: string;
         };
         Relationships: [
           {
@@ -160,76 +220,50 @@ export type Database = {
           },
         ];
       };
-      bus_group_members: {
+      trip_requests: {
         Row: {
-          id: string;
-          trip_request_id: string;
-          user_id: string;
-          joined_at: string;
-        };
-        Insert: {
-          id?: string;
-          trip_request_id: string;
-          user_id: string;
-          joined_at?: string;
-        };
-        Update: {
-          id?: string;
-          trip_request_id?: string;
-          user_id?: string;
-          joined_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "bus_group_members_trip_request_id_fkey";
-            columns: ["trip_request_id"];
-            isOneToOne: false;
-            referencedRelation: "trip_requests";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      messages: {
-        Row: {
-          id: string;
-          match_id: string | null;
-          bus_trip_request_id: string | null;
-          sender_id: string;
-          body: string;
           created_at: string;
+          destination: string;
+          destination_lat: number | null;
+          destination_lng: number | null;
+          id: string;
+          mode: string;
+          requested_time: string;
+          starting_point: string;
+          starting_point_lat: number | null;
+          starting_point_lng: number | null;
+          status: string;
+          user_id: string;
         };
         Insert: {
-          id?: string;
-          match_id?: string | null;
-          bus_trip_request_id?: string | null;
-          sender_id: string;
-          body: string;
           created_at?: string;
+          destination: string;
+          destination_lat?: number | null;
+          destination_lng?: number | null;
+          id?: string;
+          mode: string;
+          requested_time: string;
+          starting_point: string;
+          starting_point_lat?: number | null;
+          starting_point_lng?: number | null;
+          status?: string;
+          user_id: string;
         };
         Update: {
-          id?: string;
-          match_id?: string | null;
-          bus_trip_request_id?: string | null;
-          sender_id?: string;
-          body?: string;
           created_at?: string;
+          destination?: string;
+          destination_lat?: number | null;
+          destination_lng?: number | null;
+          id?: string;
+          mode?: string;
+          requested_time?: string;
+          starting_point?: string;
+          starting_point_lat?: number | null;
+          starting_point_lng?: number | null;
+          status?: string;
+          user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "messages_match_id_fkey";
-            columns: ["match_id"];
-            isOneToOne: false;
-            referencedRelation: "matches";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "messages_bus_trip_request_id_fkey";
-            columns: ["bus_trip_request_id"];
-            isOneToOne: false;
-            referencedRelation: "trip_requests";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
     };
     Views: {
@@ -239,139 +273,161 @@ export type Database = {
       create_match: {
         Args: { request_a: string; request_b: string };
         Returns: {
-          id: string;
-          trip_request_id_a: string;
-          trip_request_id_b: string;
-          status: string;
           completed_at: string | null;
           completed_by: string | null;
+          created_at: string;
           driver_user_id: string | null;
-          created_at: string;
-        };
-      };
-      open_trip_requests: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
           id: string;
-          requester_id: string;
-          starting_point: string;
-          destination: string;
-          requested_time: string;
-          mode: string;
-          created_at: string;
-          requester_display_name: string;
-          requester_average_stars: number | null;
-          requester_completed_trip_count: number;
-          requester_rides_given: number;
-          bus_member_count: number | null;
-        }[];
-      };
-      my_matches: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          match_id: string;
-          match_status: string;
-          match_created_at: string;
-          completed_at: string | null;
-          my_trip_request_id: string;
-          my_requested_time: string;
-          counterpart_trip_request_id: string;
-          counterpart_id: string;
-          counterpart_display_name: string;
-          counterpart_starting_point: string;
-          counterpart_destination: string;
-          counterpart_requested_time: string;
-          counterpart_mode: string;
-        }[];
-      };
-      mark_trip_completed: {
-        Args: { p_trip_id: string };
-        Returns: {
-          id: string;
+          status: string;
           trip_request_id_a: string;
           trip_request_id_b: string;
-          status: string;
-          completed_at: string | null;
-          completed_by: string | null;
-          created_at: string;
         };
-      };
-      submit_rating: {
-        Args: { p_trip_id: string; p_stars: number | null; p_comment: string | null };
-        Returns: {
-          id: string;
-          trip_id: string;
-          rater_id: string;
-          ratee_id: string;
-          stars: number | null;
-          comment: string | null;
-          created_at: string;
+        SetofOptions: {
+          from: "*";
+          to: "matches";
+          isOneToOne: true;
+          isSetofReturn: false;
         };
-      };
-      profile_stats: {
-        Args: { p_user_id: string };
-        Returns: {
-          full_name: string;
-          average_stars: number | null;
-          completed_trip_count: number;
-          rides_given: number;
-          member_since: string;
-        }[];
-      };
-      profile_reviews: {
-        Args: { p_user_id: string };
-        Returns: {
-          rater_name: string;
-          stars: number | null;
-          comment: string | null;
-          created_at: string;
-        }[];
-      };
-      my_trip_history: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          trip_id: string;
-          completed_at: string | null;
-          counterpart_id: string;
-          counterpart_name: string;
-          my_destination: string;
-          counterpart_destination: string;
-          requested_time: string;
-        }[];
-      };
-      my_rating_activity: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          trip_id: string;
-          direction: string;
-          counterpart_id: string;
-          counterpart_name: string;
-          stars: number | null;
-          comment: string | null;
-          created_at: string;
-        }[];
       };
       join_bus_group: {
         Args: { p_trip_request_id: string };
         Returns: undefined;
       };
-      my_bus_groups: {
-        Args: Record<PropertyKey, never>;
+      mark_trip_completed: {
+        Args: { p_trip_id: string };
         Returns: {
-          trip_request_id: string;
-          role: string;
-          starting_point: string;
+          completed_at: string | null;
+          completed_by: string | null;
+          created_at: string;
+          driver_user_id: string | null;
+          id: string;
+          status: string;
+          trip_request_id_a: string;
+          trip_request_id_b: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "matches";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      my_bus_groups: {
+        Args: never;
+        Returns: {
           destination: string;
-          requested_time: string;
           member_count: number;
           other_display_names: string[];
+          requested_time: string;
+          role: string;
+          starting_point: string;
+          trip_request_id: string;
         }[];
       };
-      thread_participants: {
-        Args: { p_thread_type: string; p_thread_id: string };
+      my_matches: {
+        Args: never;
         Returns: {
-          user_id: string;
+          completed_at: string;
+          counterpart_destination: string;
+          counterpart_display_name: string;
+          counterpart_id: string;
+          counterpart_mode: string;
+          counterpart_requested_time: string;
+          counterpart_starting_point: string;
+          counterpart_trip_request_id: string;
+          match_created_at: string;
+          match_id: string;
+          match_status: string;
+          my_requested_time: string;
+          my_trip_request_id: string;
+        }[];
+      };
+      my_rating_activity: {
+        Args: never;
+        Returns: {
+          comment: string;
+          counterpart_id: string;
+          counterpart_name: string;
+          created_at: string;
+          direction: string;
+          stars: number;
+          trip_id: string;
+        }[];
+      };
+      my_trip_history: {
+        Args: never;
+        Returns: {
+          completed_at: string;
+          counterpart_destination: string;
+          counterpart_id: string;
+          counterpart_name: string;
+          my_destination: string;
+          requested_time: string;
+          trip_id: string;
+        }[];
+      };
+      open_trip_requests: {
+        Args: never;
+        Returns: {
+          bus_member_count: number;
+          created_at: string;
+          destination: string;
+          id: string;
+          mode: string;
+          requested_time: string;
+          requester_average_stars: number;
+          requester_completed_trip_count: number;
+          requester_display_name: string;
+          requester_id: string;
+          requester_rides_given: number;
+          starting_point: string;
+        }[];
+      };
+      profile_reviews: {
+        Args: { p_user_id: string };
+        Returns: {
+          comment: string;
+          created_at: string;
+          rater_name: string;
+          stars: number;
+        }[];
+      };
+      profile_stats: {
+        Args: { p_user_id: string };
+        Returns: {
+          average_stars: number;
+          completed_trip_count: number;
+          degree_pursuit: string;
+          full_name: string;
+          graduation_year: number;
+          member_since: string;
+          rides_given: number;
+          school: string;
+        }[];
+      };
+      submit_rating: {
+        Args: { p_comment?: string; p_stars?: number; p_trip_id: string };
+        Returns: {
+          comment: string | null;
+          created_at: string;
+          id: string;
+          ratee_id: string;
+          rater_id: string;
+          stars: number | null;
+          trip_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "ratings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      thread_participants: {
+        Args: { p_thread_id: string; p_thread_type: string };
+        Returns: {
           display_name: string;
+          user_id: string;
         }[];
       };
     };
@@ -496,6 +552,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
