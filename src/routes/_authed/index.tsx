@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { CommuteMap } from "@/components/CommuteMap";
+import { CompanionTagger, type TaggedCompanion } from "@/components/CompanionTagger";
 import { PhoneShell } from "@/components/PhoneShell";
 import { PlaceAutocompleteInput, type ResolvedPlace } from "@/components/PlaceAutocompleteInput";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,11 @@ export const Route = createFileRoute("/_authed/")({
   component: RequestScreen,
 });
 
-const DEFAULT_STARTING_POINT = "Main Campus Library";
+const DEFAULT_STARTING_POINT = "UCLA Anderson School of Management";
+// Matches CommuteMap's own FALLBACK_CENTER — keeping the default starting
+// point's coordinates in sync with its address text so the map opens
+// already centered on campus instead of blank until a place is picked.
+const DEFAULT_STARTING_POINT_COORDS = { lat: 34.0736, lng: -118.4431 };
 
 type LocationField = { address: string; lat: number | null; lng: number | null };
 
@@ -41,8 +46,8 @@ function RequestScreen() {
   const mapsLoaded = useGoogleMapsLoaded();
   const [pickup, setPickup] = useState<LocationField>({
     address: DEFAULT_STARTING_POINT,
-    lat: null,
-    lng: null,
+    lat: DEFAULT_STARTING_POINT_COORDS.lat,
+    lng: DEFAULT_STARTING_POINT_COORDS.lng,
   });
   const [destination, setDestination] = useState<LocationField>({
     address: "",
@@ -52,24 +57,40 @@ function RequestScreen() {
   const [date, setDate] = useState(todayLocalDateString());
   const [time, setTime] = useState("22:45");
   const [mode, setMode] = useState<"bus" | "car">("bus");
+  const [companions, setCompanions] = useState<TaggedCompanion[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
   const submitRequest = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("trip_requests").insert({
-        user_id: user.id,
-        starting_point: pickup.address,
-        starting_point_lat: pickup.lat,
-        starting_point_lng: pickup.lng,
-        destination: destination.address,
-        destination_lat: destination.lat,
-        destination_lng: destination.lng,
-        requested_time: combineDateAndTime(date, time).toISOString(),
-        mode,
-      });
+      const { data: request, error } = await supabase
+        .from("trip_requests")
+        .insert({
+          user_id: user.id,
+          starting_point: pickup.address,
+          starting_point_lat: pickup.lat,
+          starting_point_lng: pickup.lng,
+          destination: destination.address,
+          destination_lat: destination.lat,
+          destination_lng: destination.lng,
+          requested_time: combineDateAndTime(date, time).toISOString(),
+          mode,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+
+      if (mode === "car" && companions.length > 0) {
+        const { error: companionsError } = await supabase.from("trip_request_companions").insert(
+          companions.map((companion) => ({
+            trip_request_id: request.id,
+            user_id: companion.id,
+            added_by: user.id,
+          })),
+        );
+        if (companionsError) throw companionsError;
+      }
     },
     onSuccess: () => {
       navigate({ to: "/trips" });
@@ -154,7 +175,7 @@ function RequestScreen() {
     <PhoneShell active="home">
       <header className="p-6 pb-4">
         <h1 className="text-balance font-serif text-2xl font-medium leading-tight text-forest">
-          Where are you headed tonight?
+          Where are you headed?
         </h1>
       </header>
 
@@ -280,6 +301,15 @@ function RequestScreen() {
               </button>
             </div>
           </div>
+
+          {mode === "car" ? (
+            <div className="space-y-1">
+              <span className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                Riding With (optional)
+              </span>
+              <CompanionTagger selected={companions} onChange={setCompanions} />
+            </div>
+          ) : null}
         </div>
 
         <CommuteMap pickup={pickupCoords} destination={destinationCoords} />

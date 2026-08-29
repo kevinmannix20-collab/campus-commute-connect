@@ -57,6 +57,13 @@ function MessagesScreen() {
   });
 
   useEffect(() => {
+    supabase.rpc("mark_thread_notifications_read", {
+      p_thread_type: threadType,
+      p_thread_id: threadId,
+    });
+  }, [threadType, threadId]);
+
+  useEffect(() => {
     const channel = supabase
       .channel(`messages-${threadType}-${threadId}`)
       .on(

@@ -49,6 +49,24 @@ function BrowseScreen() {
     },
   });
 
+  // Own school, so posting cards can flag classmates at a glance — plain
+  // table select (not an RPC) since profiles_select_own lets a user read
+  // only their own row directly.
+  const myProfile = useQuery({
+    queryKey: ["my-school-info"],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("school")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   // My own open request, if any — needed to call create_match, since a
   // match always pairs the caller's own open request with someone else's.
   const myOpenRequest = useQuery({
@@ -173,6 +191,22 @@ function BrowseScreen() {
                         )}
                       />
                     </span>
+                    {request.requester_school || request.requester_degree_pursuit ? (
+                      <span
+                        className={
+                          myProfile.data?.school &&
+                          request.requester_school &&
+                          myProfile.data.school.toLowerCase() ===
+                            request.requester_school.toLowerCase()
+                            ? "inline-flex w-fit items-center rounded-md bg-forest/10 px-1.5 py-0.5 text-[9px] font-semibold text-forest"
+                            : "inline-flex w-fit items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[9px] font-medium text-zinc-500"
+                        }
+                      >
+                        {[request.requester_school, request.requester_degree_pursuit]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    ) : null}
                     <StarDisplay
                       average={request.requester_average_stars}
                       emptyLabel="New driver"
@@ -192,7 +226,11 @@ function BrowseScreen() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
-                  <span className="size-1.5 rounded-full bg-zinc-300" />
+                  <span className="size-1.5 rounded-full border border-forest" />
+                  From: {request.starting_point}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <span className="size-1.5 rounded-full bg-forest" />
                   To: {request.destination}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -203,6 +241,12 @@ function BrowseScreen() {
                   <div className="flex items-center gap-2 text-xs text-zinc-500">
                     <span className="size-1.5 rounded-full bg-zinc-300" />
                     {request.bus_member_count ?? 1}/6 joined
+                  </div>
+                ) : null}
+                {request.mode === "car" && request.companion_display_names?.length > 0 ? (
+                  <div className="flex items-center gap-2 text-xs text-zinc-500">
+                    <span className="size-1.5 rounded-full bg-zinc-300" />
+                    With: {request.companion_display_names.join(", ")}
                   </div>
                 ) : null}
               </div>
