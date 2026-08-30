@@ -193,7 +193,7 @@ function RequestScreen() {
             <div className="mb-1 ml-1 flex items-center justify-between">
               <label
                 htmlFor="starting-point"
-                className="block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+                className="block text-[11px] font-medium tracking-wider text-zinc-500"
               >
                 Starting Point
               </label>
@@ -224,7 +224,7 @@ function RequestScreen() {
           <div>
             <label
               htmlFor="destination"
-              className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+              className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
             >
               Destination
             </label>
@@ -245,7 +245,7 @@ function RequestScreen() {
             <div className="space-y-1">
               <label
                 htmlFor="date"
-                className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+                className="ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
               >
                 Date
               </label>
@@ -261,7 +261,7 @@ function RequestScreen() {
             <div className="space-y-1">
               <label
                 htmlFor="time"
-                className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+                className="ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
               >
                 Time
               </label>
@@ -277,9 +277,7 @@ function RequestScreen() {
 
           <div className="space-y-1">
             <div className="ml-1 flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                Mode
-              </span>
+              <span className="text-[11px] font-medium tracking-wider text-zinc-500">Mode</span>
               {travelTimeLabel ? (
                 <span className="text-[11px] font-medium text-forest">{travelTimeLabel}</span>
               ) : null}
@@ -312,7 +310,7 @@ function RequestScreen() {
 
           {mode === "car" ? (
             <div className="space-y-1">
-              <span className="ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              <span className="ml-1 block text-[11px] font-medium tracking-wider text-zinc-500">
                 Riding With (optional)
               </span>
               <CompanionTagger selected={companions} onChange={setCompanions} />

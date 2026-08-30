@@ -370,8 +370,8 @@ function BrowseScreen() {
                 <span
                   className={
                     request.mode === "bus"
-                      ? "rounded-md bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-900"
-                      : "rounded-md bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-900"
+                      ? "rounded-md bg-zinc-100 px-2 py-0.5 text-[9px] font-bold tracking-wide text-zinc-700"
+                      : "rounded-md bg-forest/10 px-2 py-0.5 text-[9px] font-bold tracking-wide text-forest"
                   }
                 >
                   {request.mode === "bus" ? "Bus Buddy" : "Needs Ride"}
@@ -444,7 +444,7 @@ function BrowseScreen() {
                 </button>
               ) : offeringForRequest === request.id ? (
                 <div className="space-y-2 rounded-[14px] bg-white p-3 ring-1 ring-zinc-200">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+                  <p className="text-[10px] font-medium tracking-wide text-zinc-500">
                     Confirm your ride
                   </p>
                   <PlaceAutocompleteInput

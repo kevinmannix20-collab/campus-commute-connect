@@ -136,7 +136,7 @@ function SignupScreen() {
         <div>
           <label
             htmlFor="fullName"
-            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
           >
             Full Name
           </label>
@@ -156,7 +156,7 @@ function SignupScreen() {
         <div>
           <label
             htmlFor="email"
-            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
           >
             UCLA Email
           </label>
@@ -176,7 +176,7 @@ function SignupScreen() {
         <div>
           <label
             htmlFor="password"
-            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
           >
             Password
           </label>
@@ -203,7 +203,7 @@ function SignupScreen() {
         <div>
           <label
             htmlFor="school"
-            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
           >
             School / Department
           </label>
@@ -228,7 +228,7 @@ function SignupScreen() {
         <div>
           <label
             htmlFor="degreePursuit"
-            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
           >
             Currently Pursuing
           </label>
@@ -254,7 +254,7 @@ function SignupScreen() {
           <div>
             <label
               htmlFor="graduationYear"
-              className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+              className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
             >
               Graduation Year
             </label>

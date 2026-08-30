@@ -17,7 +17,7 @@ export function StarDisplay({
 
   return (
     <span className={className ?? "inline-flex items-center gap-1 text-xs text-zinc-600"}>
-      <span aria-hidden="true" className="text-amber-500">
+      <span aria-hidden="true" className="text-forest">
         ★
       </span>
       {average.toFixed(1)}
@@ -46,7 +46,7 @@ export function StarInput({
           onClick={() => onChange(n)}
           className="p-1 text-2xl leading-none"
         >
-          <span className={n <= value ? "text-amber-500" : "text-zinc-300"}>★</span>
+          <span className={n <= value ? "text-forest" : "text-zinc-300"}>★</span>
         </button>
       ))}
     </div>

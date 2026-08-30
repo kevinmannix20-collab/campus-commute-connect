@@ -190,8 +190,8 @@ function StatusScreen() {
                   <span
                     className={
                       match.match_status === "completed"
-                        ? "rounded-full bg-zinc-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-700"
-                        : "rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-900"
+                        ? "rounded-full bg-zinc-200 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-zinc-700"
+                        : "rounded-full bg-forest/10 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-forest"
                     }
                   >
                     {match.match_status === "completed" ? "Completed" : "Matched"}
@@ -290,7 +290,7 @@ function StatusScreen() {
 
             {(myBusGroups.data ?? []).length > 0 ? (
               <div>
-                <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                <h2 className="mb-3 ml-1 text-[11px] font-medium tracking-wider text-zinc-500">
                   Bus Groups
                 </h2>
                 <div className="space-y-3">
@@ -300,7 +300,7 @@ function StatusScreen() {
                       className="space-y-3 rounded-[20px] bg-zinc-50 p-4 ring-1 ring-zinc-950/5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-900">
+                        <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-zinc-700">
                           {group.role === "host" ? "Your Post" : "Joined"}
                         </span>
                         <span className="text-xs text-zinc-400">{group.member_count}/6 riders</span>
@@ -345,7 +345,7 @@ function StatusScreen() {
 
             {pendingRequests.length > 0 ? (
               <div>
-                <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                <h2 className="mb-3 ml-1 text-[11px] font-medium tracking-wider text-zinc-500">
                   Pending Requests
                 </h2>
                 <div className="space-y-2">

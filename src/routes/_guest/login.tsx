@@ -57,7 +57,7 @@ function LoginScreen() {
         <div>
           <label
             htmlFor="email"
-            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
           >
             School Email
           </label>
@@ -77,7 +77,7 @@ function LoginScreen() {
         <div>
           <label
             htmlFor="password"
-            className="mb-1 ml-1 block text-[11px] font-medium uppercase tracking-wider text-zinc-500"
+            className="mb-1 ml-1 block text-[11px] font-medium tracking-wider text-zinc-500"
           >
             Password
           </label>

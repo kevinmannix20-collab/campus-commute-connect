@@ -13,7 +13,7 @@ export function AuthShell({
 }) {
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-100 p-4 font-sans text-zinc-900 selection:bg-forest/10 md:p-8">
-      <section className="relative flex w-full max-w-[375px] shrink-0 flex-col rounded-[24px] bg-sand shadow-xl shadow-zinc-900/5 ring-1 ring-black/5">
+      <section className="relative flex w-full max-w-[375px] shrink-0 flex-col rounded-[24px] bg-sand shadow-xl shadow-zinc-900/5 ring-1 ring-black/5 lowercase">
         <header className="p-6 pb-4">
           <h1 className="text-balance font-serif text-2xl font-medium leading-tight text-forest">
             {title}

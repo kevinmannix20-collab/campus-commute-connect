@@ -97,9 +97,7 @@ function BooleanPillSelect({
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-      {children}
-    </h2>
+    <h2 className="mb-3 ml-1 text-[11px] font-medium tracking-wider text-zinc-500">{children}</h2>
   );
 }
 

@@ -258,16 +258,16 @@ function ProfileScreen() {
           <p className="p-4 text-center text-xs text-zinc-400">Profile not found.</p>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-[20px] bg-emerald-50 p-4 ring-1 ring-emerald-900/10">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+            <div className="flex items-center gap-3 rounded-[20px] bg-zinc-50 p-4 ring-1 ring-zinc-950/5">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-forest text-sand">
                 <Leaf className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1 text-sm font-bold text-emerald-900">
+                <p className="flex items-center gap-1 text-sm font-bold text-forest">
                   {lbsSaved.toLocaleString()} lbs CO₂ saved
-                  <InfoTooltip text={CO2_EXPLANATION} className="text-emerald-700" />
+                  <InfoTooltip text={CO2_EXPLANATION} className="text-zinc-500" />
                 </p>
-                <p className="text-[11px] text-emerald-700">
+                <p className="text-[11px] text-zinc-500">
                   ≈ {milesNotDrivenEquivalent(lbsSaved).toLocaleString()} miles of solo driving
                   avoided by sharing rides
                 </p>
@@ -276,7 +276,7 @@ function ProfileScreen() {
 
             {isOwnProfile ? (
               <div className="rounded-[16px] bg-zinc-50 p-3 ring-1 ring-zinc-950/5">
-                <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium tracking-wider text-zinc-500">
                   <Home className="size-3.5" />
                   Home Address
                   <InfoTooltip text="Used to show how far each posting is from home in the browse feed." />
@@ -307,7 +307,7 @@ function ProfileScreen() {
               </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-[20px] bg-gradient-to-br from-forest to-forest/80 p-5 text-sand shadow-lg shadow-forest/20">
+            <div className="overflow-hidden rounded-[20px] bg-gradient-to-br from-forest to-deep p-5 text-sand shadow-lg shadow-forest/20">
               <div className="flex items-center justify-between">
                 <StarDisplay
                   average={stats.data.average_stars}
@@ -328,16 +328,14 @@ function ProfileScreen() {
                 <div className="rounded-[14px] bg-sand/10 p-3">
                   <div className="flex items-center gap-1.5 text-sand/70">
                     <Car className="size-3.5" />
-                    <span className="text-[10px] font-medium uppercase tracking-wide">Trips</span>
+                    <span className="text-[10px] font-medium tracking-wide">Trips</span>
                   </div>
                   <p className="mt-1 text-xl font-bold">{stats.data.completed_trip_count}</p>
                 </div>
                 <div className="rounded-[14px] bg-sand/10 p-3">
                   <div className="flex items-center gap-1.5 text-sand/70">
                     <Sparkles className="size-3.5" />
-                    <span className="text-[10px] font-medium uppercase tracking-wide">
-                      Rides Given
-                    </span>
+                    <span className="text-[10px] font-medium tracking-wide">Rides Given</span>
                   </div>
                   <p className="mt-1 text-xl font-bold">{ridesGiven}</p>
                 </div>
@@ -356,7 +354,7 @@ function ProfileScreen() {
                   </div>
                   <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-sand/20">
                     <div
-                      className="h-full rounded-full bg-amber-300 transition-all"
+                      className="h-full rounded-full bg-sand transition-all"
                       style={{ width: `${tierProgressPct}%` }}
                     />
                   </div>
@@ -384,7 +382,7 @@ function ProfileScreen() {
         )}
 
         <section>
-          <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+          <h2 className="mb-3 ml-1 text-[11px] font-medium tracking-wider text-zinc-500">
             Reviews
           </h2>
           {reviews.isLoading ? (
@@ -411,7 +409,7 @@ function ProfileScreen() {
         {isOwnProfile ? (
           <>
             <section>
-              <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              <h2 className="mb-3 ml-1 text-[11px] font-medium tracking-wider text-zinc-500">
                 Trip History
               </h2>
               {tripHistory.isLoading ? (
@@ -464,7 +462,7 @@ function ProfileScreen() {
             </section>
 
             <section>
-              <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              <h2 className="mb-3 ml-1 text-[11px] font-medium tracking-wider text-zinc-500">
                 Ratings You've Given
               </h2>
               {ratingActivity.isLoading ? (

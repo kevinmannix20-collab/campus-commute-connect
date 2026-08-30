@@ -133,9 +133,7 @@ function MessagesInboxScreen() {
       <div className="flex-1 space-y-6 overflow-y-auto px-6 pb-6">
         <section>
           <div className="mb-3 ml-1 flex items-center justify-between">
-            <h2 className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              Activity
-            </h2>
+            <h2 className="text-[11px] font-medium tracking-wider text-zinc-500">Activity</h2>
             {unreadCount > 0 ? (
               <button
                 type="button"
@@ -212,7 +210,7 @@ function MessagesInboxScreen() {
         </section>
 
         <section>
-          <h2 className="mb-3 ml-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+          <h2 className="mb-3 ml-1 text-[11px] font-medium tracking-wider text-zinc-500">
             Conversations
           </h2>
 

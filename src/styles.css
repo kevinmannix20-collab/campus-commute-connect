@@ -19,29 +19,31 @@
  */
 
 /*
- * Fraunces is a variable font whose "opsz" (optical size) axis swaps in
- * decorative display letterforms at large sizes — most visibly a
- * swash capital J with a hooked descender. That's intentional at true
- * display sizes, but every headline in this app renders at 14-24px, and
- * relying on the browser's automatic opsz-to-font-size mapping isn't
- * reliable cross-browser (some engines, notably older iOS Safari, don't
- * interpolate it correctly and fall back to a high/display opsz even at
- * small sizes — reported as the "J" in "Your Journey" looking broken).
- * Pinning a low, text-appropriate opsz here removes that dependency
- * entirely so the conventional letterforms are guaranteed everywhere.
+ * Visual identity: all UI copy renders lowercase via the `lowercase`
+ * utility on the phone/auth shell's root, so no string literal needs to
+ * change. Tailwind's preflight resets form controls' text-transform back
+ * to "none" though, which — since a directly-specified value always wins
+ * over an inherited one — stops that ancestor rule from ever reaching
+ * them. This re-applies it specifically inside a `.lowercase` container.
+ * !important is needed because Tailwind's own cascade-layer ordering
+ * otherwise outranks an unlayered rule regardless of specificity.
  */
-.font-serif {
-  font-variation-settings: "opsz" 18;
+.lowercase button,
+.lowercase input,
+.lowercase select,
+.lowercase textarea {
+  text-transform: lowercase !important;
 }
 
 @theme {
-  --font-serif: "Fraunces", serif;
-  --font-sans: "Instrument Sans", sans-serif;
-  --color-forest: #1a2f23;
+  --font-serif: "JetBrains Mono", monospace;
+  --font-sans: "JetBrains Mono", monospace;
+  --color-forest: #2774ae;
+  --color-deep: #1b5480;
   --color-moss: #3e5c4a;
-  --color-sand: #fdfcfb;
-  --color-transit-bus: #f59e0b;
-  --color-transit-car: #10b981;
+  --color-sand: #ffffff;
+  --color-transit-bus: #1b5480;
+  --color-transit-car: #2774ae;
 
   @keyframes pulse-ring {
     0% {
