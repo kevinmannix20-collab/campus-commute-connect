@@ -84,12 +84,12 @@ function BooleanPillSelect({
   onChange,
 }: {
   value: boolean | null;
-  onChange: (value: boolean) => void;
+  onChange: (value: boolean | null) => void;
 }) {
   return (
     <PillSelect
       value={value === null ? null : value ? "Yes" : "No"}
-      onChange={(v) => onChange(v === "Yes")}
+      onChange={(v) => onChange(v === null ? null : v === "Yes")}
       options={["Yes", "No"]}
     />
   );

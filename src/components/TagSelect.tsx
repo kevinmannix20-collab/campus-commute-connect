@@ -5,10 +5,12 @@
 
 type PillSelectProps = {
   value: string | null;
-  onChange: (value: string) => void;
+  onChange: (value: string | null) => void;
   options: readonly string[];
 };
 
+// Tapping the already-selected pill deselects it (back to null/unanswered)
+// instead of being stuck once picked — these fields are all optional.
 export function PillSelect({ value, onChange, options }: PillSelectProps) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -18,7 +20,7 @@ export function PillSelect({ value, onChange, options }: PillSelectProps) {
           <button
             key={option}
             type="button"
-            onClick={() => onChange(option)}
+            onClick={() => onChange(selected ? null : option)}
             className={
               selected
                 ? "rounded-full bg-forest px-3 py-1.5 text-xs font-medium text-sand"

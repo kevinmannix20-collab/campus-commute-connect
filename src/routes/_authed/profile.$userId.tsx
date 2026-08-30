@@ -196,7 +196,7 @@ function ProfileScreen() {
   const lbsSaved = stats.data ? carbonSavedLbs(stats.data.completed_trip_count) : 0;
 
   return (
-    <PhoneShell {...(isOwnProfile ? { active: "profile" as const } : {})}>
+    <PhoneShell {...(isOwnProfile ? { active: "profile" as const, showSignOut: true } : {})}>
       <header className="p-6 pb-4">
         <div className="flex items-center gap-3">
           <button
