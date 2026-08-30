@@ -182,7 +182,7 @@ function RequestScreen() {
   return (
     <PhoneShell active="home">
       <header className="p-6 pb-4">
-        <h1 className="text-balance font-serif text-2xl font-medium leading-tight text-forest">
+        <h1 className="mr-20 text-balance font-serif text-2xl font-medium leading-tight text-forest">
           Where are you headed?
         </h1>
       </header>

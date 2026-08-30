@@ -139,12 +139,14 @@ function MessagesScreen() {
         >
           <ArrowLeft className="size-4" />
         </button>
-        <div>
-          <h1 className="text-balance font-serif text-2xl font-medium leading-tight text-forest">
+        <div className="mr-16 min-w-0 flex-1">
+          <h1 className="truncate text-balance font-serif text-2xl font-medium leading-tight text-forest">
             {title}
           </h1>
           {isBus && otherParticipantNames.length > 0 ? (
-            <p className="mt-0.5 text-xs text-zinc-500">With: {otherParticipantNames.join(", ")}</p>
+            <p className="mt-0.5 truncate text-xs text-zinc-500">
+              With: {otherParticipantNames.join(", ")}
+            </p>
           ) : null}
         </div>
       </header>
