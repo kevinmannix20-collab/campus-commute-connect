@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MessageCircle, Navigation, Sparkles } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
 import { StarDisplay } from "@/components/StarRating";
@@ -90,8 +90,12 @@ function BrowseScreen() {
     })),
   );
 
-  // My own open request, if any — needed to call create_match, since a
-  // match always pairs the caller's own open request with someone else's.
+  // My own open CAR request, if any — needed to call create_match, since
+  // offering someone a ride always pairs the caller's own request with
+  // theirs, and create_match derives who's driving from mode_b (the other
+  // person's request). Restricted to mode='car' here, not just "any open
+  // request": pairing a bus post of mine with someone else's car post
+  // would silently make me their "driver" despite never offering a car.
   const myOpenRequest = useQuery({
     queryKey: myOpenRequestQueryKey,
     queryFn: async () => {
@@ -101,6 +105,7 @@ function BrowseScreen() {
         .select("id")
         .eq("user_id", user.id)
         .eq("status", "open")
+        .eq("mode", "car")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -109,6 +114,8 @@ function BrowseScreen() {
     },
     enabled: !!user,
   });
+
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const channel = supabase
@@ -186,14 +193,17 @@ function BrowseScreen() {
 
   const matchWith = async (theirRequestId: string) => {
     if (!myOpenRequest.data) return;
+    setActionError(null);
     const { error } = await supabase.rpc("create_match", {
       request_a: myOpenRequest.data.id,
       request_b: theirRequestId,
     });
-    if (!error) {
-      queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
-      queryClient.invalidateQueries({ queryKey: myOpenRequestQueryKey });
+    if (error) {
+      setActionError(error.message);
+      return;
     }
+    queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
+    queryClient.invalidateQueries({ queryKey: myOpenRequestQueryKey });
   };
 
   // Joining a bus post doesn't pair two requests like car matching does —
@@ -201,12 +211,15 @@ function BrowseScreen() {
   // request first. Up to 6 people total (poster + 5 joiners); the RPC
   // itself enforces the cap and closes the post once full.
   const joinBusGroup = async (tripRequestId: string) => {
+    setActionError(null);
     const { error } = await supabase.rpc("join_bus_group", {
       p_trip_request_id: tripRequestId,
     });
-    if (!error) {
-      queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
+    if (error) {
+      setActionError(error.message);
+      return;
     }
+    queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
   };
 
   return (
@@ -220,12 +233,17 @@ function BrowseScreen() {
         !myOpenRequest.data &&
         openRequests.data?.some((r) => r.mode === "car") ? (
           <p className="mt-2 text-xs text-amber-700">
-            Post your own request from Home before you can offer or accept a ride.
+            Post your own car request from Home before you can offer a ride.
           </p>
         ) : null}
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-6">
+        {actionError ? (
+          <p className="rounded-[12px] bg-red-50 p-3 text-xs text-red-600 ring-1 ring-red-900/10">
+            {actionError}
+          </p>
+        ) : null}
         {openRequests.isLoading ? (
           <p className="p-4 text-center text-xs text-zinc-400">Loading open commutes…</p>
         ) : openRequests.isError ? (
