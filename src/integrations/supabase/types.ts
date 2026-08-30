@@ -387,6 +387,7 @@ export type Database = {
           destination_lng: number | null
           id: string
           mode: string
+          post_type: string
           requested_time: string
           starting_point: string
           starting_point_lat: number | null
@@ -401,6 +402,7 @@ export type Database = {
           destination_lng?: number | null
           id?: string
           mode: string
+          post_type?: string
           requested_time: string
           starting_point: string
           starting_point_lat?: number | null
@@ -415,6 +417,7 @@ export type Database = {
           destination_lng?: number | null
           id?: string
           mode?: string
+          post_type?: string
           requested_time?: string
           starting_point?: string
           starting_point_lat?: number | null
@@ -594,6 +597,7 @@ export type Database = {
           destination_lng: number
           id: string
           mode: string
+          post_type: string
           requested_time: string
           requester_average_stars: number
           requester_completed_trip_count: number
@@ -628,6 +632,31 @@ export type Database = {
           rides_given: number
           school: string
         }[]
+      }
+      request_ride: {
+        Args: {
+          p_requested_time: string
+          p_starting_point: string
+          p_starting_point_lat: number
+          p_starting_point_lng: number
+          p_target_offer_id: string
+        }
+        Returns: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          driver_user_id: string | null
+          id: string
+          status: string
+          trip_request_id_a: string
+          trip_request_id_b: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_profiles: {
         Args: { p_query: string }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MessageCircle, Navigation, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
 import { PlaceAutocompleteInput } from "@/components/PlaceAutocompleteInput";
@@ -15,9 +15,11 @@ import { useHomeDistances } from "@/lib/use-home-distances";
 const DEFAULT_STARTING_POINT = "UCLA Anderson School of Management";
 const DEFAULT_STARTING_POINT_COORDS = { lat: 34.0736, lng: -118.4431 };
 
+type PostType = "need" | "offer";
+
 // "HH:MM" for a <input type="time">, in the viewer's local time — used to
-// default the inline offer-ride form's departure time to the rider's own
-// requested time, since it's just a starting point they can adjust.
+// default the inline offer/request form's departure time to the posted
+// request's own time, since it's just a starting point they can adjust.
 function toTimeInputValue(iso: string) {
   const date = new Date(iso);
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
@@ -44,7 +46,8 @@ export const Route = createFileRoute("/_authed/browse")({
 });
 
 const openRequestsQueryKey = ["open-trip-requests"];
-const myOpenRequestQueryKey = ["my-open-trip-request"];
+const myOpenOfferQueryKey = ["my-open-car-offer"];
+const myMostRecentOpenPostQueryKey = ["my-most-recent-open-post"];
 
 function formatDateTime(iso: string) {
   const date = new Date(iso);
@@ -55,6 +58,11 @@ function formatDateTime(iso: string) {
   });
   const timePart = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   return `${datePart} · ${timePart}`;
+}
+
+function modeLabel(mode: string, postType: PostType) {
+  if (mode === "bus") return postType === "offer" ? "Offering Company" : "Bus Buddy";
+  return postType === "offer" ? "Offering Ride" : "Needs Ride";
 }
 
 function BrowseScreen() {
@@ -102,14 +110,15 @@ function BrowseScreen() {
     })),
   );
 
-  // My own open CAR request, if any — needed to call create_match, since
-  // offering someone a ride always pairs the caller's own request with
-  // theirs, and create_match derives who's driving from mode_b (the other
-  // person's request). Restricted to mode='car' here, not just "any open
-  // request": pairing a bus post of mine with someone else's car post
-  // would silently make me their "driver" despite never offering a car.
-  const myOpenRequest = useQuery({
-    queryKey: myOpenRequestQueryKey,
+  // My own open car *offer*, if any — needed to call create_match on the
+  // "Need a Mate" tab, since offering someone a ride always pairs the
+  // caller's own standing offer with theirs, and create_match derives who's
+  // driving from mode_b (the other person's request). Restricted to
+  // mode='car' + post_type='offer': pairing a need-post of mine, or a bus
+  // post, with someone else's car post would silently make me their
+  // "driver" despite never actually offering a car.
+  const myOpenOffer = useQuery({
+    queryKey: myOpenOfferQueryKey,
     queryFn: async () => {
       if (!user) return null;
       const { data, error } = await supabase
@@ -118,6 +127,7 @@ function BrowseScreen() {
         .eq("user_id", user.id)
         .eq("status", "open")
         .eq("mode", "car")
+        .eq("post_type", "offer")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -127,14 +137,47 @@ function BrowseScreen() {
     enabled: !!user,
   });
 
+  // Just for picking a sensible default tab: the type of whichever open
+  // post (any mode) the caller posted most recently, if any.
+  const myMostRecentOpenPost = useQuery({
+    queryKey: myMostRecentOpenPostQueryKey,
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("trip_requests")
+        .select("post_type")
+        .eq("user_id", user.id)
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const [activeTab, setActiveTab] = useState<PostType>("need");
+  // Auto-picks the tab once on first load based on the caller's own most
+  // recent open post — offered a ride -> default to browsing who needs one
+  // (and vice versa) — but never overrides a tab the user has since chosen
+  // themselves, even if this query refetches later.
+  const hasAutoSelectedTabRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoSelectedTabRef.current || myMostRecentOpenPost.isLoading || !user) return;
+    hasAutoSelectedTabRef.current = true;
+    const ownType = myMostRecentOpenPost.data?.post_type;
+    setActiveTab(ownType === "offer" ? "need" : ownType === "need" ? "offer" : "need");
+  }, [myMostRecentOpenPost.isLoading, myMostRecentOpenPost.data, user]);
+
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Inline "offer a ride" mini-form state, for a driver with no open car
-  // request of their own — lets them offer directly off someone else's
-  // card instead of being sent to post a throwaway request first. Only
-  // one card's form is open at a time.
-  const [offeringForRequest, setOfferingForRequest] = useState<string | null>(null);
-  const [offerStartingPoint, setOfferStartingPoint] = useState<{
+  // Inline mini-form state, shared by both the Need tab's "Offer a Ride"
+  // flow and the Offering tab's "Request This Ride" flow — only one card's
+  // form is ever open at a time regardless of which tab it's on, so one set
+  // of state covers both; only the RPC called at confirm time differs.
+  const [actionFormForRequest, setActionFormForRequest] = useState<string | null>(null);
+  const [actionStartingPoint, setActionStartingPoint] = useState<{
     address: string;
     lat: number | null;
     lng: number | null;
@@ -143,17 +186,17 @@ function BrowseScreen() {
     lat: DEFAULT_STARTING_POINT_COORDS.lat,
     lng: DEFAULT_STARTING_POINT_COORDS.lng,
   });
-  const [offerTime, setOfferTime] = useState("");
+  const [actionTime, setActionTime] = useState("");
 
-  const openOfferForm = (request: { id: string; requested_time: string }) => {
+  const openActionForm = (request: { id: string; requested_time: string }) => {
     setActionError(null);
-    setOfferingForRequest(request.id);
-    setOfferStartingPoint({
+    setActionFormForRequest(request.id);
+    setActionStartingPoint({
       address: DEFAULT_STARTING_POINT,
       lat: DEFAULT_STARTING_POINT_COORDS.lat,
       lng: DEFAULT_STARTING_POINT_COORDS.lng,
     });
-    setOfferTime(toTimeInputValue(request.requested_time));
+    setActionTime(toTimeInputValue(request.requested_time));
   };
 
   useEffect(() => {
@@ -161,7 +204,7 @@ function BrowseScreen() {
       .channel("trip_requests-browse")
       .on("postgres_changes", { event: "*", schema: "public", table: "trip_requests" }, () => {
         queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
-        queryClient.invalidateQueries({ queryKey: myOpenRequestQueryKey });
+        queryClient.invalidateQueries({ queryKey: myOpenOfferQueryKey });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "bus_group_members" }, () => {
         queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
@@ -175,7 +218,9 @@ function BrowseScreen() {
 
   // open_trip_requests() already orders by requested_time ascending and
   // excludes past ones — soonest trip first, nothing stale left to filter.
-  const hardFilteredRequests = openRequests.data ?? [];
+  // The active tab narrows that same hard-filtered set to one post_type;
+  // ranking below only ever sees the currently-visible tab's candidates.
+  const tabRequests = (openRequests.data ?? []).filter((r) => r.post_type === activeTab);
 
   // AI ranking is a soft layer on top of the hard filter above, which
   // already guarantees every candidate here is valid (open, not past, not
@@ -184,7 +229,7 @@ function BrowseScreen() {
   // hard-filtered order is used as-is — no "AI checked this" reason line
   // is ever shown in that case. Keyed on the candidate id set (not just
   // count) so a changed lineup re-ranks.
-  const candidateIdsKey = hardFilteredRequests
+  const candidateIdsKey = tabRequests
     .map((r) => r.id)
     .sort()
     .join(",");
@@ -196,7 +241,7 @@ function BrowseScreen() {
         rankings: { candidate_id: string; rank: number; reason: string | null }[];
       }>("rank-matches", {
         body: {
-          candidates: hardFilteredRequests.map((r) => ({
+          candidates: tabRequests.map((r) => ({
             trip_request_id: r.id,
             requester_id: r.requester_id,
             starting_point: r.starting_point,
@@ -209,7 +254,7 @@ function BrowseScreen() {
       if (error) throw error;
       return data;
     },
-    enabled: hardFilteredRequests.length >= 2,
+    enabled: tabRequests.length >= 2,
     // A failed/slow AI call should never block browsing — fall back to
     // the plain hard-filtered order rather than retrying or erroring the page.
     retry: false,
@@ -225,16 +270,16 @@ function BrowseScreen() {
 
   const sortedRequests =
     matchRanking.data && !matchRanking.isError
-      ? [...hardFilteredRequests].sort(
+      ? [...tabRequests].sort(
           (a, b) => (rankByRequestId.get(a.id) ?? 99) - (rankByRequestId.get(b.id) ?? 99),
         )
-      : hardFilteredRequests;
+      : tabRequests;
 
   const matchWith = async (theirRequestId: string) => {
-    if (!myOpenRequest.data) return;
+    if (!myOpenOffer.data) return;
     setActionError(null);
     const { error } = await supabase.rpc("create_match", {
-      request_a: myOpenRequest.data.id,
+      request_a: myOpenOffer.data.id,
       request_b: theirRequestId,
     });
     if (error) {
@@ -242,13 +287,15 @@ function BrowseScreen() {
       return;
     }
     queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
-    queryClient.invalidateQueries({ queryKey: myOpenRequestQueryKey });
+    queryClient.invalidateQueries({ queryKey: myOpenOfferQueryKey });
   };
 
   // Joining a bus post doesn't pair two requests like car matching does —
   // there's no reciprocal offer, so no need to have posted your own
-  // request first. Up to 6 people total (poster + 5 joiners); the RPC
-  // itself enforces the cap and closes the post once full.
+  // request first. Works the same whether the post is a need (someone
+  // wants a buddy) or an offer (someone's already going, come along) — up
+  // to 6 people total either way; the RPC enforces the cap and closes the
+  // post once full.
   const joinBusGroup = async (tripRequestId: string) => {
     setActionError(null);
     const { error } = await supabase.rpc("join_bus_group", {
@@ -261,36 +308,52 @@ function BrowseScreen() {
     queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
   };
 
-  const offerRideDirect = useMutation({
+  const confirmAction = useMutation({
     mutationFn: async (targetRequestId: string) => {
-      if (offerStartingPoint.lat === null || offerStartingPoint.lng === null) {
+      if (actionStartingPoint.lat === null || actionStartingPoint.lng === null) {
         throw new Error("Select a starting point from the suggestions");
       }
-      if (!offerTime) {
+      if (!actionTime) {
         throw new Error("Pick a rough departure time");
       }
-      const [hoursStr, minutesStr] = offerTime.split(":");
+      const [hoursStr, minutesStr] = actionTime.split(":");
       const departureTime = new Date();
       departureTime.setHours(Number(hoursStr ?? 0), Number(minutesStr ?? 0), 0, 0);
 
-      const { error } = await supabase.rpc("offer_ride", {
-        p_target_request_id: targetRequestId,
-        p_starting_point: offerStartingPoint.address,
-        p_starting_point_lat: offerStartingPoint.lat,
-        p_starting_point_lng: offerStartingPoint.lng,
-        p_requested_time: departureTime.toISOString(),
-      });
+      // Need tab: viewer is offering a ride onto a need-post -> offer_ride.
+      // Offering tab: viewer is requesting a seat on an offer-post -> request_ride.
+      const { error } =
+        activeTab === "need"
+          ? await supabase.rpc("offer_ride", {
+              p_target_request_id: targetRequestId,
+              p_starting_point: actionStartingPoint.address,
+              p_starting_point_lat: actionStartingPoint.lat,
+              p_starting_point_lng: actionStartingPoint.lng,
+              p_requested_time: departureTime.toISOString(),
+            })
+          : await supabase.rpc("request_ride", {
+              p_target_offer_id: targetRequestId,
+              p_starting_point: actionStartingPoint.address,
+              p_starting_point_lat: actionStartingPoint.lat,
+              p_starting_point_lng: actionStartingPoint.lng,
+              p_requested_time: departureTime.toISOString(),
+            });
       if (error) throw error;
     },
     onSuccess: () => {
-      setOfferingForRequest(null);
+      setActionFormForRequest(null);
       queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
-      queryClient.invalidateQueries({ queryKey: myOpenRequestQueryKey });
+      queryClient.invalidateQueries({ queryKey: myOpenOfferQueryKey });
     },
     onError: (error) => {
       setActionError(error instanceof Error ? error.message : "Something went wrong");
     },
   });
+
+  const emptyStateMessage =
+    activeTab === "need"
+      ? "No one needs a ride or buddy right now — check back soon."
+      : "No one's offering a ride right now — check back soon.";
 
   return (
     <PhoneShell active="browse">
@@ -299,6 +362,30 @@ function BrowseScreen() {
         <p className="mt-1 max-w-[40ch] text-pretty text-xs text-zinc-500">
           Help a classmate get home safely tonight.
         </p>
+        <div className="mt-3 flex rounded-[12px] bg-zinc-100 p-1 ring-1 ring-zinc-200">
+          <button
+            type="button"
+            onClick={() => setActiveTab("need")}
+            className={
+              activeTab === "need"
+                ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
+                : "flex-1 py-2 text-xs font-medium text-zinc-500"
+            }
+          >
+            Need a Mate
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("offer")}
+            className={
+              activeTab === "offer"
+                ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
+                : "flex-1 py-2 text-xs font-medium text-zinc-500"
+            }
+          >
+            Offering a Ride
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-6">
@@ -374,7 +461,7 @@ function BrowseScreen() {
                       : "rounded-md bg-forest/10 px-2 py-0.5 text-[9px] font-bold tracking-wide text-forest"
                   }
                 >
-                  {request.mode === "bus" ? "Bus Buddy" : "Needs Ride"}
+                  {modeLabel(request.mode, request.post_type as PostType)}
                 </span>
               </div>
               <div className="space-y-1">
@@ -434,7 +521,7 @@ function BrowseScreen() {
                   </svg>
                   Join Commute
                 </button>
-              ) : myOpenRequest.data ? (
+              ) : activeTab === "need" && myOpenOffer.data ? (
                 <button
                   type="button"
                   onClick={() => matchWith(request.id)}
@@ -442,59 +529,57 @@ function BrowseScreen() {
                 >
                   Offer a Ride
                 </button>
-              ) : offeringForRequest === request.id ? (
+              ) : actionFormForRequest === request.id ? (
                 <div className="space-y-2 rounded-[14px] bg-white p-3 ring-1 ring-zinc-200">
                   <p className="text-[10px] font-medium tracking-wide text-zinc-500">
-                    Confirm your ride
+                    {activeTab === "need" ? "Confirm your ride" : "Confirm your request"}
                   </p>
                   <PlaceAutocompleteInput
-                    value={offerStartingPoint.address}
+                    value={actionStartingPoint.address}
                     onTextChange={(text) =>
-                      setOfferStartingPoint({ address: text, lat: null, lng: null })
+                      setActionStartingPoint({ address: text, lat: null, lng: null })
                     }
-                    onPlaceSelected={setOfferStartingPoint}
+                    onPlaceSelected={setActionStartingPoint}
                     placeholder="Your starting point..."
                     className="w-full rounded-[10px] bg-zinc-50 px-3 py-2 text-xs text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
                   />
                   <input
                     type="time"
-                    value={offerTime}
-                    onChange={(e) => setOfferTime(e.target.value)}
+                    value={actionTime}
+                    onChange={(e) => setActionTime(e.target.value)}
                     className="w-full rounded-[10px] bg-zinc-50 px-3 py-2 text-xs text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
                   />
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => setOfferingForRequest(null)}
+                      onClick={() => setActionFormForRequest(null)}
                       className="flex-1 rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200"
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
-                      onClick={() => offerRideDirect.mutate(request.id)}
-                      disabled={offerRideDirect.isPending}
+                      onClick={() => confirmAction.mutate(request.id)}
+                      disabled={confirmAction.isPending}
                       className="flex-1 rounded-[10px] bg-forest px-3 py-2 text-xs font-medium text-sand disabled:opacity-50"
                     >
-                      {offerRideDirect.isPending ? "Confirming…" : "Confirm"}
+                      {confirmAction.isPending ? "Confirming…" : "Confirm"}
                     </button>
                   </div>
                 </div>
               ) : (
                 <button
                   type="button"
-                  onClick={() => openOfferForm(request)}
+                  onClick={() => openActionForm(request)}
                   className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 pl-2 pr-3 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5"
                 >
-                  Offer a Ride
+                  {activeTab === "need" ? "Offer a Ride" : "Request This Ride"}
                 </button>
               )}
             </div>
           ))
         ) : (
-          <p className="p-4 text-center text-xs text-zinc-400">
-            No open commutes right now — check back soon.
-          </p>
+          <p className="p-4 text-center text-xs text-zinc-400">{emptyStateMessage}</p>
         )}
       </div>
     </PhoneShell>

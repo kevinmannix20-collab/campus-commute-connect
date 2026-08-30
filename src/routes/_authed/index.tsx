@@ -58,6 +58,7 @@ function RequestScreen() {
   const [date, setDate] = useState(todayLocalDateString());
   const [time, setTime] = useState("22:45");
   const [mode, setMode] = useState<"bus" | "car">("bus");
+  const [postType, setPostType] = useState<"need" | "offer">("need");
   const [companions, setCompanions] = useState<TaggedCompanion[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
@@ -77,6 +78,7 @@ function RequestScreen() {
           destination_lng: destination.lng,
           requested_time: combineDateAndTime(date, time).toISOString(),
           mode,
+          post_type: postType,
         })
         .select("id")
         .single();
@@ -189,6 +191,36 @@ function RequestScreen() {
 
       <div className="flex-1 space-y-6 overflow-y-auto px-6">
         <div className="space-y-4">
+          <div className="space-y-1">
+            <span className="ml-1 block text-[11px] font-medium tracking-wider text-zinc-500">
+              I&apos;m posting to
+            </span>
+            <div className="flex rounded-[12px] bg-zinc-100 p-1 ring-1 ring-zinc-200">
+              <button
+                type="button"
+                onClick={() => setPostType("need")}
+                className={
+                  postType === "need"
+                    ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
+                    : "flex-1 py-2 text-xs font-medium text-zinc-500"
+                }
+              >
+                I need a ride/buddy
+              </button>
+              <button
+                type="button"
+                onClick={() => setPostType("offer")}
+                className={
+                  postType === "offer"
+                    ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
+                    : "flex-1 py-2 text-xs font-medium text-zinc-500"
+                }
+              >
+                I&apos;m offering a ride/company
+              </button>
+            </div>
+          </div>
+
           <div>
             <div className="mb-1 ml-1 flex items-center justify-between">
               <label
@@ -335,7 +367,9 @@ function RequestScreen() {
               ? formError
               : submitRequest.isPending
                 ? (gasFunFact ?? "Posting your request…")
-                : "Post a request and we'll look for a match"}
+                : postType === "offer"
+                  ? "Post your offer and we'll look for a match"
+                  : "Post a request and we'll look for a match"}
           </span>
         </div>
         <button
@@ -344,7 +378,11 @@ function RequestScreen() {
           disabled={submitRequest.isPending}
           className="w-full rounded-[16px] bg-forest py-3 text-sm font-medium text-sand ring-2 ring-forest ring-offset-2 transition-transform active:scale-[0.98] disabled:opacity-60"
         >
-          {submitRequest.isPending ? "Looking for a mate…" : "Find a Travel Mate"}
+          {submitRequest.isPending
+            ? "Looking for a mate…"
+            : postType === "offer"
+              ? "Post My Offer"
+              : "Find a Travel Mate"}
         </button>
       </div>
     </PhoneShell>
