@@ -1,24 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Award,
-  Car,
-  GraduationCap,
-  Home,
-  Leaf,
-  MessageCircle,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, Award, Car, Home, Leaf, MessageCircle, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { InfoTooltip } from "@/components/InfoTooltip";
 import { PhoneShell } from "@/components/PhoneShell";
 import { PlaceAutocompleteInput } from "@/components/PlaceAutocompleteInput";
+import { RatingForm } from "@/components/RatingForm";
 import { StarDisplay } from "@/components/StarRating";
 import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { carbonSavedLbs, milesNotDrivenEquivalent } from "@/lib/carbonSavings";
+import { CO2_EXPLANATION, carbonSavedLbs, milesNotDrivenEquivalent } from "@/lib/carbonSavings";
 import { computeProfileCompletion } from "@/lib/profile-completion";
 import {
   driverTier,
@@ -81,6 +74,7 @@ function ProfileScreen() {
   // a slow first fetch resolving after the user has already started typing
   // would stomp their in-progress edit back to the fetched (stale) value.
   const homeAddressInitializedRef = useRef(false);
+  const [expandedRatingTripId, setExpandedRatingTripId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOwnProfile || !homeAddressQuery.data || homeAddressInitializedRef.current) return;
@@ -139,6 +133,7 @@ function ProfileScreen() {
   });
 
   const given = (ratingActivity.data ?? []).filter((r) => r.direction === "given");
+  const ratedTripIds = new Set(given.map((r) => r.trip_id));
 
   const notifications = useQuery({
     queryKey: ["my-notifications"],
@@ -212,9 +207,20 @@ function ProfileScreen() {
           >
             <ArrowLeft className="size-4" />
           </button>
-          <h1 className="mr-16 min-w-0 flex-1 truncate text-balance font-serif text-2xl font-medium leading-tight text-forest">
-            {stats.isLoading ? "Profile" : (stats.data?.full_name ?? "Unknown student")}
-          </h1>
+          <div className="mr-16 min-w-0 flex-1">
+            <h1 className="truncate text-balance font-serif text-2xl font-medium leading-tight text-forest">
+              {stats.isLoading ? "Profile" : (stats.data?.full_name ?? "Unknown student")}
+            </h1>
+            {stats.data?.school ? (
+              <p className="mt-0.5 truncate text-xs text-zinc-500">
+                {stats.data.school}
+                {stats.data.degree_pursuit ? ` · ${stats.data.degree_pursuit}` : ""}
+                {stats.data.degree_pursuit === "Alumni" && stats.data.graduation_year
+                  ? ` '${String(stats.data.graduation_year).slice(-2)}`
+                  : ""}
+              </p>
+            ) : null}
+          </div>
         </div>
         {isOwnProfile ? (
           <div className="mt-3 pl-11">
@@ -252,6 +258,55 @@ function ProfileScreen() {
           <p className="p-4 text-center text-xs text-zinc-400">Profile not found.</p>
         ) : (
           <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-[20px] bg-emerald-50 p-4 ring-1 ring-emerald-900/10">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+                <Leaf className="size-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1 text-sm font-bold text-emerald-900">
+                  {lbsSaved.toLocaleString()} lbs CO₂ saved
+                  <InfoTooltip text={CO2_EXPLANATION} className="text-emerald-700" />
+                </p>
+                <p className="text-[11px] text-emerald-700">
+                  ≈ {milesNotDrivenEquivalent(lbsSaved).toLocaleString()} miles of solo driving
+                  avoided by sharing rides
+                </p>
+              </div>
+            </div>
+
+            {isOwnProfile ? (
+              <div className="rounded-[16px] bg-zinc-50 p-3 ring-1 ring-zinc-950/5">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                  <Home className="size-3.5" />
+                  Home Address
+                  <InfoTooltip text="Used to show how far each posting is from home in the browse feed." />
+                </div>
+                <PlaceAutocompleteInput
+                  value={homeAddress}
+                  onTextChange={(text) => {
+                    homeAddressDirtyRef.current = true;
+                    setHomeAddress(text);
+                  }}
+                  onPlaceSelected={(place) => {
+                    homeAddressDirtyRef.current = false;
+                    setHomeAddress(place.address);
+                    saveHomeAddress.mutate({
+                      address: place.address,
+                      lat: place.lat,
+                      lng: place.lng,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (!homeAddressDirtyRef.current) return;
+                    homeAddressDirtyRef.current = false;
+                    saveHomeAddress.mutate({ address: homeAddress, lat: null, lng: null });
+                  }}
+                  placeholder="Where do you live?"
+                  className="w-full rounded-[10px] bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
+                />
+              </div>
+            ) : null}
+
             <div className="overflow-hidden rounded-[20px] bg-gradient-to-br from-forest to-forest/80 p-5 text-sand shadow-lg shadow-forest/20">
               <div className="flex items-center justify-between">
                 <StarDisplay
@@ -307,69 +362,6 @@ function ProfileScreen() {
                   </div>
                 </div>
               ) : null}
-            </div>
-
-            {stats.data.school ? (
-              <div className="flex items-center gap-2 rounded-[16px] bg-zinc-50 p-3.5 ring-1 ring-zinc-950/5">
-                <GraduationCap className="size-4 shrink-0 text-zinc-400" />
-                <p className="text-xs font-medium text-zinc-700">
-                  {stats.data.school}
-                  {stats.data.degree_pursuit ? ` · ${stats.data.degree_pursuit}` : ""}
-                  {stats.data.degree_pursuit === "Alumni" && stats.data.graduation_year
-                    ? ` '${String(stats.data.graduation_year).slice(-2)}`
-                    : ""}
-                </p>
-              </div>
-            ) : null}
-
-            {isOwnProfile ? (
-              <div className="rounded-[20px] bg-zinc-50 p-4 ring-1 ring-zinc-950/5">
-                <div className="mb-3 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                  <Home className="size-3.5" />
-                  Home Address
-                </div>
-                <PlaceAutocompleteInput
-                  value={homeAddress}
-                  onTextChange={(text) => {
-                    homeAddressDirtyRef.current = true;
-                    setHomeAddress(text);
-                  }}
-                  onPlaceSelected={(place) => {
-                    homeAddressDirtyRef.current = false;
-                    setHomeAddress(place.address);
-                    saveHomeAddress.mutate({
-                      address: place.address,
-                      lat: place.lat,
-                      lng: place.lng,
-                    });
-                  }}
-                  onBlur={() => {
-                    if (!homeAddressDirtyRef.current) return;
-                    homeAddressDirtyRef.current = false;
-                    saveHomeAddress.mutate({ address: homeAddress, lat: null, lng: null });
-                  }}
-                  placeholder="Where do you live?"
-                  className="w-full rounded-[10px] bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
-                />
-                <p className="mt-1.5 text-[10px] text-zinc-400">
-                  Used to show how far each posting is from home in the browse feed.
-                </p>
-              </div>
-            ) : null}
-
-            <div className="flex items-center gap-3 rounded-[20px] bg-emerald-50 p-4 ring-1 ring-emerald-900/10">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
-                <Leaf className="size-5" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-emerald-900">
-                  {lbsSaved.toLocaleString()} lbs CO₂ saved
-                </p>
-                <p className="text-[11px] text-emerald-700">
-                  ≈ {milesNotDrivenEquivalent(lbsSaved).toLocaleString()} miles of solo driving
-                  avoided by sharing rides
-                </p>
-              </div>
             </div>
 
             {isOwnProfile ? (
@@ -442,6 +434,29 @@ function ProfileScreen() {
                         </span>
                       </div>
                       <p className="mt-1 text-[11px] text-zinc-500">To {trip.my_destination}</p>
+                      {!ratedTripIds.has(trip.trip_id) ? (
+                        expandedRatingTripId === trip.trip_id ? (
+                          <div className="mt-2">
+                            <RatingForm
+                              tripId={trip.trip_id}
+                              onDone={() => {
+                                setExpandedRatingTripId(null);
+                                queryClient.invalidateQueries({
+                                  queryKey: ["my-rating-activity"],
+                                });
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedRatingTripId(trip.trip_id)}
+                            className="mt-2 rounded-[10px] bg-forest px-3 py-1.5 text-[11px] font-medium text-sand"
+                          >
+                            Rate this trip
+                          </button>
+                        )
+                      ) : null}
                     </div>
                   ))}
                 </div>

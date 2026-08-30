@@ -103,7 +103,7 @@ export function PhoneShell({
         <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
         <nav className="flex items-center justify-around border-t border-zinc-950/5 bg-sand p-4">
           <NavItem to="/" label="Home" icon={Home} active={active === "home"} />
-          <NavItem to="/browse" label="Browse" icon={Search} active={active === "browse"} />
+          <NavItem to="/browse" label="Open Requests" icon={Search} active={active === "browse"} />
           <NavItem to="/trips" label="Status" icon={Navigation} active={active === "status"} />
           {user ? (
             <Link

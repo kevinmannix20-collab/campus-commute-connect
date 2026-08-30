@@ -131,6 +131,21 @@ function StatusScreen() {
     queryClient.invalidateQueries({ queryKey: myRequestsQueryKey });
   };
 
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const leaveBusGroup = async (tripRequestId: string) => {
+    if (!window.confirm("Leave this commute?")) return;
+    setActionError(null);
+    const { error } = await supabase.rpc("leave_bus_group", {
+      p_trip_request_id: tripRequestId,
+    });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: myBusGroupsQueryKey });
+  };
+
   const isLoading = myRequests.isLoading || myMatches.isLoading || myBusGroups.isLoading;
   const matchedRequestIds = new Set((myMatches.data ?? []).map((m) => m.my_trip_request_id));
   // Bus posts are shown via the bus-groups section below (host or member,
@@ -147,6 +162,11 @@ function StatusScreen() {
       </header>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-6">
+        {actionError ? (
+          <p className="rounded-[12px] bg-red-50 p-3 text-xs text-red-600 ring-1 ring-red-900/10">
+            {actionError}
+          </p>
+        ) : null}
         {isLoading ? (
           <p className="p-4 text-center text-xs text-zinc-400">Loading your trips…</p>
         ) : !hasAnyRequests ? (
@@ -308,6 +328,15 @@ function StatusScreen() {
                         <MessageCircle className="size-4" />
                         Group chat
                       </Link>
+                      {group.role === "member" ? (
+                        <button
+                          type="button"
+                          onClick={() => leaveBusGroup(group.trip_request_id)}
+                          className="w-full text-center text-[10px] font-medium text-zinc-500 underline underline-offset-2 hover:text-red-600"
+                        >
+                          Leave this commute
+                        </button>
+                      ) : null}
                     </div>
                   ))}
                 </div>

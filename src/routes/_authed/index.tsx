@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useGoogleMapsLoaded } from "@/lib/use-google-maps";
 import { useTravelDurations } from "@/lib/use-travel-durations";
 import { combineDateAndTime, todayLocalDateString } from "@/lib/trip-time";
+import { estimateGasGallons, haversineDistanceMiles } from "@/lib/carbonSavings";
 
 export const Route = createFileRoute("/_authed/")({
   head: () => ({
@@ -171,6 +172,13 @@ function RequestScreen() {
   const travelTime = mode === "car" ? travelDurations.car : travelDurations.bus;
   const travelTimeLabel = travelTime ? `~${travelTime} by ${mode}` : null;
 
+  // A single-line fun fact shown only while the request is submitting —
+  // lightweight context on the trip's footprint, not a blocking screen.
+  const gasFunFact =
+    pickupCoords && destinationCoords
+      ? `Did you know? This commute would use about ${estimateGasGallons(haversineDistanceMiles(pickupCoords, destinationCoords)).toFixed(1)} gallons of gas alone — nice work sharing the ride.`
+      : null;
+
   return (
     <PhoneShell active="home">
       <header className="p-6 pb-4">
@@ -328,7 +336,7 @@ function RequestScreen() {
             {formError
               ? formError
               : submitRequest.isPending
-                ? "Posting your request…"
+                ? (gasFunFact ?? "Posting your request…")
                 : "Post a request and we'll look for a match"}
           </span>
         </div>

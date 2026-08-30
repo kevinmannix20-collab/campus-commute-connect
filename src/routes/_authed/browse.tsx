@@ -1,15 +1,27 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MessageCircle, Navigation, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { PhoneShell } from "@/components/PhoneShell";
+import { PlaceAutocompleteInput } from "@/components/PlaceAutocompleteInput";
 import { StarDisplay } from "@/components/StarRating";
 import { TierBadge } from "@/components/TierBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { driverTier } from "@/lib/priorityScore";
 import { useHomeDistances } from "@/lib/use-home-distances";
+
+const DEFAULT_STARTING_POINT = "UCLA Anderson School of Management";
+const DEFAULT_STARTING_POINT_COORDS = { lat: 34.0736, lng: -118.4431 };
+
+// "HH:MM" for a <input type="time">, in the viewer's local time — used to
+// default the inline offer-ride form's departure time to the rider's own
+// requested time, since it's just a starting point they can adjust.
+function toTimeInputValue(iso: string) {
+  const date = new Date(iso);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
 
 export const Route = createFileRoute("/_authed/browse")({
   head: () => ({
@@ -117,6 +129,33 @@ function BrowseScreen() {
 
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Inline "offer a ride" mini-form state, for a driver with no open car
+  // request of their own — lets them offer directly off someone else's
+  // card instead of being sent to post a throwaway request first. Only
+  // one card's form is open at a time.
+  const [offeringForRequest, setOfferingForRequest] = useState<string | null>(null);
+  const [offerStartingPoint, setOfferStartingPoint] = useState<{
+    address: string;
+    lat: number | null;
+    lng: number | null;
+  }>({
+    address: DEFAULT_STARTING_POINT,
+    lat: DEFAULT_STARTING_POINT_COORDS.lat,
+    lng: DEFAULT_STARTING_POINT_COORDS.lng,
+  });
+  const [offerTime, setOfferTime] = useState("");
+
+  const openOfferForm = (request: { id: string; requested_time: string }) => {
+    setActionError(null);
+    setOfferingForRequest(request.id);
+    setOfferStartingPoint({
+      address: DEFAULT_STARTING_POINT,
+      lat: DEFAULT_STARTING_POINT_COORDS.lat,
+      lng: DEFAULT_STARTING_POINT_COORDS.lng,
+    });
+    setOfferTime(toTimeInputValue(request.requested_time));
+  };
+
   useEffect(() => {
     const channel = supabase
       .channel("trip_requests-browse")
@@ -222,6 +261,37 @@ function BrowseScreen() {
     queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
   };
 
+  const offerRideDirect = useMutation({
+    mutationFn: async (targetRequestId: string) => {
+      if (offerStartingPoint.lat === null || offerStartingPoint.lng === null) {
+        throw new Error("Select a starting point from the suggestions");
+      }
+      if (!offerTime) {
+        throw new Error("Pick a rough departure time");
+      }
+      const [hoursStr, minutesStr] = offerTime.split(":");
+      const departureTime = new Date();
+      departureTime.setHours(Number(hoursStr ?? 0), Number(minutesStr ?? 0), 0, 0);
+
+      const { error } = await supabase.rpc("offer_ride", {
+        p_target_request_id: targetRequestId,
+        p_starting_point: offerStartingPoint.address,
+        p_starting_point_lat: offerStartingPoint.lat,
+        p_starting_point_lng: offerStartingPoint.lng,
+        p_requested_time: departureTime.toISOString(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setOfferingForRequest(null);
+      queryClient.invalidateQueries({ queryKey: openRequestsQueryKey });
+      queryClient.invalidateQueries({ queryKey: myOpenRequestQueryKey });
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Something went wrong");
+    },
+  });
+
   return (
     <PhoneShell active="browse">
       <header className="sticky top-0 z-20 bg-sand p-6 pb-2">
@@ -229,13 +299,6 @@ function BrowseScreen() {
         <p className="mt-1 max-w-[40ch] text-pretty text-xs text-zinc-500">
           Help a classmate get home safely tonight.
         </p>
-        {!myOpenRequest.isLoading &&
-        !myOpenRequest.data &&
-        openRequests.data?.some((r) => r.mode === "car") ? (
-          <p className="mt-2 text-xs text-amber-700">
-            Post your own car request from Home before you can offer a ride.
-          </p>
-        ) : null}
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-6">
@@ -371,12 +434,57 @@ function BrowseScreen() {
                   </svg>
                   Join Commute
                 </button>
-              ) : (
+              ) : myOpenRequest.data ? (
                 <button
                   type="button"
                   onClick={() => matchWith(request.id)}
-                  disabled={!myOpenRequest.data}
-                  className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 pl-2 pr-3 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5 disabled:opacity-40"
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 pl-2 pr-3 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5"
+                >
+                  Offer a Ride
+                </button>
+              ) : offeringForRequest === request.id ? (
+                <div className="space-y-2 rounded-[14px] bg-white p-3 ring-1 ring-zinc-200">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+                    Confirm your ride
+                  </p>
+                  <PlaceAutocompleteInput
+                    value={offerStartingPoint.address}
+                    onTextChange={(text) =>
+                      setOfferStartingPoint({ address: text, lat: null, lng: null })
+                    }
+                    onPlaceSelected={setOfferStartingPoint}
+                    placeholder="Your starting point..."
+                    className="w-full rounded-[10px] bg-zinc-50 px-3 py-2 text-xs text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
+                  />
+                  <input
+                    type="time"
+                    value={offerTime}
+                    onChange={(e) => setOfferTime(e.target.value)}
+                    className="w-full rounded-[10px] bg-zinc-50 px-3 py-2 text-xs text-zinc-900 outline-none ring-1 ring-zinc-200 focus:ring-forest"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOfferingForRequest(null)}
+                      className="flex-1 rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-500 ring-1 ring-zinc-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => offerRideDirect.mutate(request.id)}
+                      disabled={offerRideDirect.isPending}
+                      className="flex-1 rounded-[10px] bg-forest px-3 py-2 text-xs font-medium text-sand disabled:opacity-50"
+                    >
+                      {offerRideDirect.isPending ? "Confirming…" : "Confirm"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openOfferForm(request)}
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 pl-2 pr-3 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5"
                 >
                   Offer a Ride
                 </button>
