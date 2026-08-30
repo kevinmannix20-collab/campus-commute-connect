@@ -100,7 +100,7 @@ export function PhoneShell({
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-100 p-4 font-sans text-zinc-900 selection:bg-forest/10 md:p-8">
-      <section className="relative flex h-[720px] w-full max-w-[375px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-sand shadow-xl shadow-zinc-900/5 ring-1 ring-black/5 lowercase">
+      <section className="relative flex h-[720px] w-full max-w-[375px] shrink-0 flex-col overflow-hidden rounded-[24px] bg-sand shadow-xl shadow-zinc-900/5 ring-1 ring-black/5">
         {showSignOut ? <SignOutButton /> : null}
         <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
         <nav className="flex items-center justify-around border-t border-zinc-950/5 bg-sand p-4">

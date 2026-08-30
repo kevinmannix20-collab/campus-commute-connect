@@ -93,7 +93,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             { name: "twitter:card", content: "summary_large_image" },
             { name: "twitter:site", content: "@Lovable" },
                   // PWA / installability
-            { name: "theme-color", content: "#2774ae" },
+            { name: "theme-color", content: "#1a2f23" },
             { name: "mobile-web-app-capable", content: "yes" },
             { name: "apple-mobile-web-app-capable", content: "yes" },
             { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
@@ -108,7 +108,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
             {
                       rel: "stylesheet",
-                      href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+                      href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Instrument+Sans:wght@400;500;600&display=swap",
             },
             { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
                   // PWA / installability

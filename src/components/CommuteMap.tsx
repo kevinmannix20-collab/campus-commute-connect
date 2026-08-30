@@ -93,7 +93,7 @@ export function CommuteMap({ pickup, destination }: Props) {
       pickupMarkerRef.current = new google.maps.Marker({
         map,
         position: pickup,
-        label: { text: "P", color: "#ffffff", fontSize: "11px", fontWeight: "600" },
+        label: { text: "P", color: "#fdfcfb", fontSize: "11px", fontWeight: "600" },
         title: "Pickup",
       });
     }
@@ -102,7 +102,7 @@ export function CommuteMap({ pickup, destination }: Props) {
       destinationMarkerRef.current = new google.maps.Marker({
         map,
         position: destination,
-        label: { text: "D", color: "#ffffff", fontSize: "11px", fontWeight: "600" },
+        label: { text: "D", color: "#fdfcfb", fontSize: "11px", fontWeight: "600" },
         title: "Destination",
       });
     }
@@ -111,7 +111,7 @@ export function CommuteMap({ pickup, destination }: Props) {
       lineRef.current = new google.maps.Polyline({
         map,
         path: [pickup, destination],
-        strokeColor: "#2774ae",
+        strokeColor: "#1a2f23",
         strokeOpacity: 0.5,
         strokeWeight: 2,
       });

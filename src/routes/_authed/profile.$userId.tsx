@@ -307,7 +307,7 @@ function ProfileScreen() {
               </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-[20px] bg-gradient-to-br from-forest to-deep p-5 text-sand shadow-lg shadow-forest/20">
+            <div className="overflow-hidden rounded-[20px] bg-gradient-to-br from-forest to-forest/80 p-5 text-sand shadow-lg shadow-forest/20">
               <div className="flex items-center justify-between">
                 <StarDisplay
                   average={stats.data.average_stars}
