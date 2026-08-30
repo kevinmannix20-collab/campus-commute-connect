@@ -372,7 +372,7 @@ function ProfileScreen() {
                 </div>
                 <span className="flex-1 text-sm font-medium text-zinc-900">Messages</span>
                 {unreadCount > 0 ? (
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-forest text-[10px] font-bold text-sand">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 ) : null}
