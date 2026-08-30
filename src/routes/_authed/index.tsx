@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authed/")({
       },
     ],
   }),
-  // The need/offer choice lives on Open Requests now, not here — its
+  // The need/offer choice lives on Find a Mate now, not here — its
   // "Post" buttons link here with ?type=need|offer so the right value
   // still gets set without asking again. Arriving any other way (e.g.
   // the Home tab) defaults to "need", same as before that choice existed.

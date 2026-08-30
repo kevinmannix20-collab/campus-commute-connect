@@ -28,13 +28,13 @@ function toTimeInputValue(iso: string) {
 export const Route = createFileRoute("/_authed/browse")({
   head: () => ({
     meta: [
-      { title: "Open Commutes — Commute Mate" },
+      { title: "Find a Mate — Commute Mate" },
       {
         name: "description",
         content:
           "Scroll open student commute requests, join someone on the bus, or offer an empty seat in your car for the trip home.",
       },
-      { property: "og:title", content: "Open Commutes — Commute Mate" },
+      { property: "og:title", content: "Find a Mate — Commute Mate" },
       {
         property: "og:description",
         content:
@@ -358,9 +358,9 @@ function BrowseScreen() {
   return (
     <PhoneShell active="browse">
       <header className="sticky top-0 z-20 bg-sand p-6 pb-2">
-        <h1 className="font-serif text-2xl font-medium leading-tight text-forest">Open Commutes</h1>
+        <h1 className="font-serif text-2xl font-medium leading-tight text-forest">Find a Mate</h1>
         <p className="mt-1 max-w-[40ch] text-pretty text-xs text-zinc-500">
-          Help a classmate get home safely tonight.
+          Someone&apos;s heading your way.
         </p>
         <div className="mt-3 flex rounded-[12px] bg-zinc-100 p-1 ring-1 ring-zinc-200">
           <button
@@ -404,7 +404,7 @@ function BrowseScreen() {
           </p>
         ) : null}
         {openRequests.isLoading ? (
-          <p className="p-4 text-center text-xs text-zinc-400">Loading open commutes…</p>
+          <p className="p-4 text-center text-xs text-zinc-400">Looking for a mate…</p>
         ) : openRequests.isError ? (
           <p className="p-4 text-center text-xs text-red-600">Couldn&apos;t load requests.</p>
         ) : sortedRequests.length > 0 ? (

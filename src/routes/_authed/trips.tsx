@@ -11,13 +11,13 @@ import { useAuth } from "@/lib/auth-context";
 export const Route = createFileRoute("/_authed/trips")({
   head: () => ({
     meta: [
-      { title: "Your Journey — Commute Mate" },
+      { title: "My Rides — Commute Mate" },
       {
         name: "description",
         content:
           "Track the status of your commute requests and view the itinerary for every matched bus companion or car ride.",
       },
-      { property: "og:title", content: "Your Journey — Commute Mate" },
+      { property: "og:title", content: "My Rides — Commute Mate" },
       {
         property: "og:description",
         content:
@@ -158,7 +158,7 @@ function StatusScreen() {
   return (
     <PhoneShell active="status">
       <header className="p-6 pb-2">
-        <h1 className="font-serif text-2xl font-medium leading-tight text-forest">Your Journey</h1>
+        <h1 className="font-serif text-2xl font-medium leading-tight text-forest">My Rides</h1>
       </header>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-6">
