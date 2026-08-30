@@ -386,6 +386,15 @@ function BrowseScreen() {
             Offering a Ride
           </button>
         </div>
+        <Link
+          to="/"
+          search={{ type: activeTab === "need" ? "offer" : "need" }}
+          className="mt-2 block text-center text-[11px] font-medium text-forest underline underline-offset-2"
+        >
+          {activeTab === "need"
+            ? "Have a ride to offer? Post it"
+            : "Need a ride? Post your request"}
+        </Link>
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-6">

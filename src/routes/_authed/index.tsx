@@ -30,6 +30,12 @@ export const Route = createFileRoute("/_authed/")({
       },
     ],
   }),
+  // The need/offer choice lives on Open Requests now, not here — its
+  // "Post" buttons link here with ?type=need|offer so the right value
+  // still gets set without asking again. Arriving any other way (e.g.
+  // the Home tab) defaults to "need", same as before that choice existed.
+  validateSearch: (search: Record<string, unknown>): { type?: "need" | "offer" } =>
+    search["type"] === "offer" || search["type"] === "need" ? { type: search["type"] } : {},
   component: RequestScreen,
 });
 
@@ -44,6 +50,7 @@ type LocationField = { address: string; lat: number | null; lng: number | null }
 function RequestScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { type } = Route.useSearch();
   const mapsLoaded = useGoogleMapsLoaded();
   const [pickup, setPickup] = useState<LocationField>({
     address: DEFAULT_STARTING_POINT,
@@ -58,7 +65,7 @@ function RequestScreen() {
   const [date, setDate] = useState(todayLocalDateString());
   const [time, setTime] = useState("22:45");
   const [mode, setMode] = useState<"bus" | "car">("bus");
-  const [postType, setPostType] = useState<"need" | "offer">("need");
+  const postType: "need" | "offer" = type ?? "need";
   const [companions, setCompanions] = useState<TaggedCompanion[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
@@ -191,36 +198,6 @@ function RequestScreen() {
 
       <div className="flex-1 space-y-6 overflow-y-auto px-6">
         <div className="space-y-4">
-          <div className="space-y-1">
-            <span className="ml-1 block text-[11px] font-medium tracking-wider text-zinc-500">
-              I&apos;m posting to
-            </span>
-            <div className="flex rounded-[12px] bg-zinc-100 p-1 ring-1 ring-zinc-200">
-              <button
-                type="button"
-                onClick={() => setPostType("need")}
-                className={
-                  postType === "need"
-                    ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
-                    : "flex-1 py-2 text-xs font-medium text-zinc-500"
-                }
-              >
-                I need a ride/buddy
-              </button>
-              <button
-                type="button"
-                onClick={() => setPostType("offer")}
-                className={
-                  postType === "offer"
-                    ? "flex-1 rounded-[8px] bg-sand py-2 text-xs font-medium text-forest shadow-sm"
-                    : "flex-1 py-2 text-xs font-medium text-zinc-500"
-                }
-              >
-                I&apos;m offering a ride/company
-              </button>
-            </div>
-          </div>
-
           <div>
             <div className="mb-1 ml-1 flex items-center justify-between">
               <label
