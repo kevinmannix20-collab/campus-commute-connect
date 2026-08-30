@@ -18,6 +18,22 @@
  * 2. Register it in @theme inline as --color-<name>: var(--<name>)
  */
 
+/*
+ * Fraunces is a variable font whose "opsz" (optical size) axis swaps in
+ * decorative display letterforms at large sizes — most visibly a
+ * swash capital J with a hooked descender. That's intentional at true
+ * display sizes, but every headline in this app renders at 14-24px, and
+ * relying on the browser's automatic opsz-to-font-size mapping isn't
+ * reliable cross-browser (some engines, notably older iOS Safari, don't
+ * interpolate it correctly and fall back to a high/display opsz even at
+ * small sizes — reported as the "J" in "Your Journey" looking broken).
+ * Pinning a low, text-appropriate opsz here removes that dependency
+ * entirely so the conventional letterforms are guaranteed everywhere.
+ */
+.font-serif {
+  font-variation-settings: "opsz" 18;
+}
+
 @theme {
   --font-serif: "Fraunces", serif;
   --font-sans: "Instrument Sans", sans-serif;
