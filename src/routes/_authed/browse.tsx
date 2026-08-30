@@ -172,8 +172,8 @@ function BrowseScreen() {
 
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Inline mini-form state, shared by both the Need tab's "Offer a Ride"
-  // flow and the Offering tab's "Request This Ride" flow — only one card's
+  // Inline mini-form state, shared by both the Need tab's "Can Offer a Ride"
+  // flow and the Offering tab's "Need a Ride" flow — only one card's
   // form is ever open at a time regardless of which tab it's on, so one set
   // of state covers both; only the RPC called at confirm time differs.
   const [actionFormForRequest, setActionFormForRequest] = useState<string | null>(null);
@@ -519,7 +519,7 @@ function BrowseScreen() {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Join Commute
+                  Join Bus Commute
                 </button>
               ) : activeTab === "need" && myOpenOffer.data ? (
                 <button
@@ -527,7 +527,7 @@ function BrowseScreen() {
                   onClick={() => matchWith(request.id)}
                   className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 pl-2 pr-3 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5"
                 >
-                  Offer a Ride
+                  Can Offer a Ride
                 </button>
               ) : actionFormForRequest === request.id ? (
                 <div className="space-y-2 rounded-[14px] bg-white p-3 ring-1 ring-zinc-200">
@@ -573,7 +573,7 @@ function BrowseScreen() {
                   onClick={() => openActionForm(request)}
                   className="flex w-full items-center justify-center gap-2 rounded-[12px] py-2 pl-2 pr-3 text-xs font-medium text-forest ring-1 ring-forest hover:bg-forest/5"
                 >
-                  {activeTab === "need" ? "Offer a Ride" : "Request This Ride"}
+                  {activeTab === "need" ? "Can Offer a Ride" : "Need a Ride"}
                 </button>
               )}
             </div>
