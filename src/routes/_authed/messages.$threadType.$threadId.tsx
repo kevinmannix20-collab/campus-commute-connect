@@ -120,6 +120,14 @@ function MessagesScreen() {
     ? "Group Chat"
     : ((participants.data ?? []).find((p) => p.user_id !== user?.id)?.display_name ?? "Message");
 
+  // Bus threads have more than one other person, so — unlike the 1:1
+  // match title above — there's no single name to put in the header.
+  // Shown as soon as the thread loads (same "With: ..." phrasing as the
+  // Journey tab), not just once someone else has sent a message.
+  const otherParticipantNames = (participants.data ?? [])
+    .filter((p) => p.user_id !== user?.id)
+    .map((p) => p.display_name);
+
   return (
     <PhoneShell>
       <header className="flex items-center gap-3 p-6 pb-4">
@@ -131,9 +139,14 @@ function MessagesScreen() {
         >
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="text-balance font-serif text-2xl font-medium leading-tight text-forest">
-          {title}
-        </h1>
+        <div>
+          <h1 className="text-balance font-serif text-2xl font-medium leading-tight text-forest">
+            {title}
+          </h1>
+          {isBus && otherParticipantNames.length > 0 ? (
+            <p className="mt-0.5 text-xs text-zinc-500">With: {otherParticipantNames.join(", ")}</p>
+          ) : null}
+        </div>
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-6 pb-4">
